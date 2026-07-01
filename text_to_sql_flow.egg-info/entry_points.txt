@@ -1,0 +1,2 @@
+[console_scripts]
+text-to-sql-flow = text_to_sql_flow.cli:app
