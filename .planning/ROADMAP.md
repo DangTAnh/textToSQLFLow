@@ -15,12 +15,19 @@
 **Phase 1: Core Pipeline**
 **Goal:** Xây dựng pipeline cơ bản: CLI nhận mô tả → LLM gen flow → parse/validate → JSON output
 **Mode:** mvp
+**Walking Skeleton:** Complete
 **Requirements:** CLI-01, CLI-02, CLI-05, GEN-01, GEN-02, GEN-03, GEN-04, GEN-05, OUT-01
+**Plans:** 3 plans in 3 waves
 **Success Criteria:**
 1. User chạy `text-to-sql-flow generate "mô tả" --output ./out` và nhận file JSON
 2. JSON output đúng schema Flow → Steps → Output với Pydantic validate
 3. LLM trả JSON malformed → tự động retry tối đa 3 lần
 4. Output JSON ghi ra file thành công
+
+**Plans:**
+- [ ] 01-01-PLAN.md — Project scaffold + Pydantic types + CLI entry point
+- [ ] 01-02-PLAN.md — Core pipeline: LLM client, prompt, parser, writer, pipeline controller
+- [ ] 01-03-PLAN.md — Tests: unit tests + integration tests with mocked LLM
 
 **Phase 2: Evaluate & Tune**
 **Goal:** Thêm evaluation loop: LLM đánh giá chất lượng → tune prompt → loop → auto/interactive mode
