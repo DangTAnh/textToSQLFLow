@@ -1,0 +1,41 @@
+# Project State
+
+## Project Reference
+
+See: `.planning/PROJECT.md` (updated 2026-07-01)
+
+**Core value:** Data engineer có thể đưa mô tả nghiệp vụ và nhận luồng SQL Spark sẵn sàng chạy.
+**Current focus:** Project initialization — no phase started yet.
+
+## Status
+
+| Aspect | Status |
+|--------|--------|
+| Initialization | ✅ Complete |
+| Research | ✅ Complete |
+| Requirements | ✅ Defined (19 v1 requirements) |
+| Roadmap | ✅ Created (3 phases) |
+| Current Phase | Not started |
+
+## Phase Summary
+
+| Phase | Status | Requirements |
+|-------|--------|--------------|
+| Phase 1: Core Pipeline | 🔜 Pending | 9 |
+| Phase 2: Evaluate & Tune | 🔜 Pending | 7 |
+| Phase 3: Multi-Provider & Polish | 🔜 Pending | 3 |
+
+## Active Decisions
+
+| Decision | Status |
+|----------|--------|
+| Python + thư viện phổ biến (không LangChain) | ✅ Decided |
+| Multi LLM provider (litellm abstraction) | ✅ Decided |
+| CLI + file output | ✅ Decided |
+| --auto / --interactive flags | ✅ Decided |
+| YOLO mode | ✅ Decided |
+| Vertical MVP project structure | ✅ Decided |
+| Coarse granularity (3 phases) | ✅ Decided |
+
+---
+*State updated: 2026-07-01*
