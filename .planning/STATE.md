@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: CLI GUI & UX Improvements
 status: planning
-last_updated: "2026-07-01T18:05:12.742Z"
+last_updated: "2026-07-01T18:30:00.000Z"
 last_activity: 2026-07-01
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,7 +20,7 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-07-01)
 
 **Core value:** Data engineer có thể đưa mô tả nghiệp vụ và nhận luồng SQL Spark sẵn sàng chạy.
-**Current focus:** Milestone v1.0 complete. All 19 requirements implemented.
+**Current focus:** Milestone v1.1 — CLI GUI & UX Improvements.
 
 ## Status
 
@@ -28,17 +28,24 @@ See: `.planning/PROJECT.md` (updated 2026-07-01)
 |--------|--------|
 | Initialization | ✅ Complete |
 | Research | ✅ Complete |
-| Requirements | ✅ Defined (19 v1 requirements) |
-| Roadmap | ✅ Created (3 phases) |
-| Current Phase | Phase 1 — Complete ✅ |
+| Requirements | ✅ Defined (9 v1.1 requirements) |
+| Roadmap | ✅ Created (3 phases: 4-6) |
+| Current Phase | Phase 4 — Not started |
 
-## Phase Summary
+## Milestones
+
+| Milestone | Status | Phases | Requirements |
+|-----------|--------|--------|--------------|
+| v1.0 | ✅ Complete | 3 (Phases 1-3) | 19 |
+| v1.1 | 🔄 In Progress | 3 (Phases 4-6) | 9 |
+
+## Phase Summary (v1.1)
 
 | Phase | Status | Requirements |
 |-------|--------|--------------|
-| Phase 1: Core Pipeline | ✅ Complete | 9 |
-| Phase 2: Evaluate & Tune | ✅ Complete | 7 |
-| Phase 3: Multi-Provider & Polish | ✅ Complete | 3 |
+| Phase 4: Config Foundation | 📋 Planned | CFG-01, CFG-02 |
+| Phase 5: Interactive Mode | 📋 Planned | GUI-01, GUI-02, GUI-03, GUI-04 |
+| Phase 6: Batch & Results | 📋 Planned | GUI-05, GUI-06, GUI-07 |
 
 ## Active Decisions
 
@@ -50,14 +57,35 @@ See: `.planning/PROJECT.md` (updated 2026-07-01)
 | --auto / --interactive flags | ✅ Decided |
 | YOLO mode | ✅ Decided |
 | Vertical MVP project structure | ✅ Decided |
-| Coarse granularity (3 phases) | ✅ Decided |
-
----
-*State updated: 2026-07-01*
+| Coarse granularity (3 phases per milestone) | ✅ Decided |
+| Rich-based CLI GUI (không web framework) | ✅ Decided |
+| .env file for API key management | ✅ Decided |
+| opencode/deepseek-v4-flash-free as default provider | ✅ Decided |
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-07-01 — Milestone v1.1 started
+| Aspect | Value |
+|--------|-------|
+| Phase | Phase 4: Config Foundation |
+| Plan | — |
+| Status | Roadmap created, awaiting plan |
+| Last activity | 2026-07-01 — v1.1 roadmap created |
+
+## Accumulated Context
+
+### Key Decisions (v1.1)
+
+- **.env > env var > config YAML**: Priority chain for API key resolution. Phase 4 implements the .env loader.
+- **Default provider**: Switch to `opencode/deepseek-v4-flash-free` (free tier, no key needed for basic usage).
+- **Rich-based TUI**: Interactive mode uses `rich` for tables, prompts, and formatted output — no web framework.
+- **No session persistence**: v1.1 keeps session history in memory (no file-based persistence until proven needed).
+
+### Phasing Rationale
+
+1. **Phase 4 first** — .env loading and default provider are prerequisites for the interactive experience.
+2. **Phase 5 second** — Core interactive workflow (input, provider selection, API key form, REPL loop). This is the main UX improvement.
+3. **Phase 6 last** — Batch mode, result summary, and re-generate build on top of interactive session flow.
+
+---
+
+*State updated: 2026-07-01*
