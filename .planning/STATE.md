@@ -15,13 +15,13 @@ See: `.planning/PROJECT.md` (updated 2026-07-01)
 | Research | ✅ Complete |
 | Requirements | ✅ Defined (19 v1 requirements) |
 | Roadmap | ✅ Created (3 phases) |
-| Current Phase | Not started |
+| Current Phase | Phase 1 — Planned (ready to execute) |
 
 ## Phase Summary
 
 | Phase | Status | Requirements |
 |-------|--------|--------------|
-| Phase 1: Core Pipeline | 🔜 Pending | 9 |
+| Phase 1: Core Pipeline | 📋 Planned | 9 (3 plans, 3 waves) |
 | Phase 2: Evaluate & Tune | 🔜 Pending | 7 |
 | Phase 3: Multi-Provider & Polish | 🔜 Pending | 3 |
 
