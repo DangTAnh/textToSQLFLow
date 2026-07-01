@@ -1,16 +1,21 @@
 # Roadmap: TextToSQLFlow
 
-**[3 phases]** | **[19 requirements mapped]** | All v1 requirements covered ✓
+**[3 phases (v1.0)] + [3 phases (v1.1)]** | **[19 v1.0 + 9 v1.1 requirements mapped]** | All requirements covered ✓
 
 | # | Phase | Goal | Requirements | Success Criteria |
 |---|-------|------|--------------|------------------|
-| 1 | Core Pipeline | Xây dựng pipeline cơ bản: CLI nhận mô tả → LLM gen flow → parse/validate → JSON output | CLI-01, CLI-02, CLI-05, GEN-01, GEN-02, GEN-03, GEN-04, GEN-05, OUT-01 | 4 |
-| 2 | Evaluate & Tune | Thêm evaluation loop: đánh giá chất lượng → tune → loop → auto/interactive mode | CLI-06, EVAL-01, EVAL-02, EVAL-03, EVAL-04, EVAL-05, EVAL-06 | 5 |
+| 1 | Core Pipeline | Pipeline cơ bản: CLI nhận mô tả → LLM gen flow → parse/validate → JSON output | CLI-01, CLI-02, CLI-05, GEN-01, GEN-02, GEN-03, GEN-04, GEN-05, OUT-01 | 4 |
+| 2 | Evaluate & Tune | Evaluation loop: đánh giá chất lượng → tune → loop → auto/interactive mode | CLI-06, EVAL-01, EVAL-02, EVAL-03, EVAL-04, EVAL-05, EVAL-06 | 5 |
 | 3 | Multi-Provider & Polish | Hỗ trợ nhiều LLM provider + HTML report + config file | CLI-03, CLI-04, OUT-02 | 3 |
+| 4 | Config Foundation | .env API key loading + default provider tối ưu | CFG-01, CFG-02 | 3 |
+| 5 | Interactive Mode | Rich CLI interactive mode: nhập mô tả, chọn provider, nhập key, REPL loop | GUI-01, GUI-02, GUI-03, GUI-04 | 4 |
+| 6 | Batch & Results | Batch mode + result summary + re-generate flow cũ | GUI-05, GUI-06, GUI-07 | 4 |
 
 ---
 
 ### Phase Details
+
+## v1.0 (Completed)
 
 **Phase 1: Core Pipeline**
 **Goal:** Xây dựng pipeline cơ bản: CLI nhận mô tả → LLM gen flow → parse/validate → JSON output
@@ -61,6 +66,42 @@
 - [x] 03-02-PLAN.md — HTML report renderer (Jinja2, dark theme)
 - [x] 03-03-PLAN.md — Wire CLI + pipeline with --provider, --config, --html flags
 
+## v1.1 (Current Milestone)
+
+### Phase 4: Config Foundation
+**Goal:** User can configure API keys via `.env` file and use the optimal default provider without manual flags
+**Depends on**: Phase 3 (Multi-Provider & Polish)
+**Requirements**: CFG-01, CFG-02
+**Success Criteria** (what must be TRUE):
+1. User places `OPENAI_API_KEY=sk-...` in `.env` file → tool loads it automatically without `--api-key` or config YAML
+2. User runs tool without `--provider` flag → tool uses `opencode/deepseek-v4-flash-free` by default
+3. API key priority chain is honored: `.env` > environment variable > config YAML > error prompt
+**Plans**: TBD
+
+### Phase 5: Interactive Mode
+**Goal:** User can generate multiple flows through an interactive rich CLI without remembering flags or config details
+**Depends on**: Phase 4 (Config Foundation)
+**Requirements**: GUI-01, GUI-02, GUI-03, GUI-04
+**Success Criteria** (what must be TRUE):
+1. User runs interactive mode and inputs multiple business descriptions one after another in the same session
+2. User selects a provider from an interactive rich list (not `--provider` flag), showing available options with descriptions
+3. If selected provider has no API key in `.env` / env var / config, tool prompts user to enter it inline
+4. After each flow generation, tool asks "Generate another? (y/n)" — user can continue or exit
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 6: Batch & Results
+**Goal:** User can process descriptions from a file, view a consolidated summary of all generated flows, and regenerate any past flow with different settings
+**Depends on**: Phase 5 (Interactive Mode)
+**Requirements**: GUI-05, GUI-06, GUI-07
+**Success Criteria** (what must be TRUE):
+1. User runs batch mode pointing to a `.txt` file with one description per line → tool generates flows for all descriptions
+2. After interactive or batch session, user sees a summary table showing all flows: ID, description, provider, status, timestamp
+3. User can select a previously generated flow from the summary and regenerate it with a different provider or config
+4. Any flow displayed in the summary can be selected as source for re-generation
+**Plans**: TBD
+**UI hint**: yes
+
 ---
 
 ## Phase Dependencies
@@ -69,17 +110,38 @@
 graph LR
     P1[Phase 1: Core Pipeline] --> P2[Phase 2: Evaluate & Tune]
     P2 --> P3[Phase 3: Multi-Provider & Polish]
+    P3 --> P4[Phase 4: Config Foundation]
+    P4 --> P5[Phase 5: Interactive Mode]
+    P5 --> P6[Phase 6: Batch & Results]
 ```
 
-- Phase 1 độc lập (có thể chạy trước)
-- Phase 2 phụ thuộc Phase 1 (cần pipeline để evaluate)
-- Phase 3 có thể chạy song song với Phase 2 (config file độc lập với evaluate loop)
+- Phase 1-3: v1.0 (completed)
+- Phase 4 độc lập tương đối — có thể chạy trước Phase 5 (cần .env + default provider cho interactive mode)
+- Phase 5 phụ thuộc Phase 4 (cần .env loading + default provider trước)
+- Phase 6 phụ thuộc Phase 5 (cần interactive mode để có session history cho summary + re-gen)
 
 ## Notes
 
-- **Parallel execution:** phase 3 có thể bắt đầu sau khi phase 1 hoàn thành (không cần đợi phase 2)
-- **POC scope:** Phase 1 dùng 1 provider cụ thể (OpenAI), mở rộng ở Phase 3
-- **MVP**: Mỗi phase deliver end-to-end slice, user có thể dùng được ngay sau mỗi phase
+- **v1.0 (Phases 1-3)**: Complete. All 19 requirements implemented.
+- **v1.1 (Phases 4-6)**: Focus on UX — rich interactive CLI replaces raw flag-based usage for common workflows.
+- **Granularity**: Coarse (3 phases for 9 v1.1 requirements).
+- **No UI framework**: All interactive UI is rich-based (terminal), not web.
+
+## Coverage
+
+| Requirement | Phase |
+|-------------|-------|
+| CFG-01 | Phase 4 |
+| CFG-02 | Phase 4 |
+| GUI-01 | Phase 5 |
+| GUI-02 | Phase 5 |
+| GUI-03 | Phase 5 |
+| GUI-04 | Phase 5 |
+| GUI-05 | Phase 6 |
+| GUI-06 | Phase 6 |
+| GUI-07 | Phase 6 |
+
+**Coverage: 9/9 v1.1 requirements mapped ✓**
 
 ---
-*Roadmap updated: 2026-07-01 (Phase 2 plans finalized)*
+*Roadmap updated: 2026-07-01 (v1.1 phases 4-6 added)*
