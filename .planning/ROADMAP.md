@@ -33,6 +33,7 @@
 **Goal:** Thêm evaluation loop: LLM đánh giá chất lượng → tune prompt → loop → auto/interactive mode
 **Mode:** mvp
 **Requirements:** CLI-06, EVAL-01, EVAL-02, EVAL-03, EVAL-04, EVAL-05, EVAL-06
+**Plans:** 3 plans in 3 waves
 **Success Criteria:**
 1. LLM đánh giá flow với rubric và trả score + feedback
 2. Score < threshold → tune prompt với feedback → re-generate
@@ -40,14 +41,25 @@
 4. `--auto` chạy tự động không cần confirm
 5. `--interactive` dừng ở mỗi iteration cho user review
 
+**Plans:**
+- [ ] 02-01-PLAN.md — Evaluator module: rubric prompt, score parsing, evaluate_flow function
+- [ ] 02-02-PLAN.md — Loop + CLI: evaluate-tune loop, --auto/--interactive flags, Rich progress bar
+- [ ] 02-03-PLAN.md — Tests: evaluator unit tests, pipeline loop tests, CLI flag tests
+
 **Phase 3: Multi-Provider & Polish**
 **Goal:** Hỗ trợ nhiều LLM provider + HTML report + config file
 **Mode:** mvp
 **Requirements:** CLI-03, CLI-04, OUT-02
+**Plans:** 3 plans in 2 waves
 **Success Criteria:**
 1. Config YAML cho phép cấu hình provider, API key, model params
 2. `--provider` flag chọn provider (openai, claude, deepseek, nvidia, openrouter, opencode)
 3. HTML report hiển thị flow diagram + evaluation results
+
+**Plans:**
+- [ ] 03-01-PLAN.md — Config module + litellm multi-provider abstraction
+- [ ] 03-02-PLAN.md — HTML report renderer (Jinja2, dark theme)
+- [ ] 03-03-PLAN.md — Wire CLI + pipeline with --provider, --config, --html flags
 
 ---
 
@@ -70,4 +82,4 @@ graph LR
 - **MVP**: Mỗi phase deliver end-to-end slice, user có thể dùng được ngay sau mỗi phase
 
 ---
-*Roadmap created: 2026-07-01*
+*Roadmap updated: 2026-07-01 (Phase 2 plans finalized)*
