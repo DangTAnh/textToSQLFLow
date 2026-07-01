@@ -1,0 +1,103 @@
+# Luồng spark sql được mô tả như sau. Trong đó:
+1. name: tên của luồng SQL ETL
+2. steps: danh sách các step thực hiện luồng sql trên spark sql.
+2.1. steps.name: tên của step thực hiện, có giá trị duy nhất trong phạm vi steps.
+2.2. steps.parents: danh sách tên của step chạy trước đó mà step hiện tại phụ thuộc vào, có sử dụng temp view hoặc bảng do kết quả các step trước sinh ra.
+2.3. steps.order: thứ tự thực hiện, nếu cùng giá trị sẽ được thực hiện song song. Trình tự thực hiện theo thứ tự steps.order tăng dần.
+2.4. steps.sql: câu sql thực thi. UDF đã được tối ưu. Bảng dữ liệu ${table_var}, table_var là biến được truyền vào. Tham số $[param_var], param_var tham số được truyền vào.
+2.5. steps.output: lưu thông tin kết quả thực thi câu sql.
+2.5.1. steps.output.tempView: tên của spark temp view lưu kết quả thực thi sql, dữ liệu của temp view đã được cache trên storage.
+2.5.2. steps.output.table: tên bảng lưu kết quả thực thi câu sql dưới định dạng parquet trên HDFS.
+2.6. steps.description: mô tả nghiệp vụ của step
+2.7. steps.diagram: lưu thông tin vị trí hiển thị của step trên giao diện, kích thước của hiển thị 30x10, khoảng cách hiển thị 20.
+2.7.1: steps.diagram.x: lưu tọa độ hiện thị theo phương ngang
+2.7.1: steps.diagram.y: lưu tọa độ hiện thị theo phương thẳng đứng
+2.8. steps.active: trạng thái hoạt động của step. true là trạng thái đang hoạt động (enable), false là trạng thái không hoạt động (disable)
+2.9. steps.createdDate: thời gian tạo của step.
+
+
+{
+    "name": "PTDL_28468",
+    "description": "sao kê theo số tài khoản",
+    "steps": [{
+        "name": "ACCOUNT_INFOR",
+        "parents": [],
+        "order": 1,
+        "sql": "SELECT distinct (km.MSISDN), b.MSISDN as msisdn_encrypted, c.ID_NO, a.ACC_NO, b.MOBILE_DISP_NAME, b.ACC_ID, b.MOBILE_STATUS, b.CUSTOMER_TYPE, c.FULL_ADDRESS, c.BIRTHDAY, b.CUSTOMER_TYPE_DATE, b.ISSUE_DATE, b.UPDATED_DATE, b.DEV_STAFF_CODE, b.NETWORK, b.viettel_bank_code from ( select ACC_ID, ACC_NO, CUST_ID from ${L1_BANKPLUS_CUST_ACCOUNT} where ACC_NO in ('9704229206443947144') ) a inner join ( select * from ( select MSISDN, MOBILE_DISP_NAME, ACC_ID, MOBILE_STATUS, CUSTOMER_TYPE, CUSTOMER_TYPE_DATE, ISSUE_DATE, UPDATED_DATE, DEV_STAFF_CODE, NETWORK, viettel_bank_code, row_number() over( partition by MSISDN order by ISSUE_DATE desc ) as rn from ${L1_BANKPLUS_CUST_MOBILE} where viettel_bank_code in ('VTT') and ACC_ID = '43057064' ) where rn = 1 ) b on a.ACC_ID = b.ACC_ID inner join ${L1_BANKPLUS_CUSTOMER} c on a.CUST_ID = c.CUST_ID join ${DYNAMIC_MSISDN_KEYMAP} km on b.msisdn = km.ENCRYPTED_MSISDN",
+        "output": {
+            "tempView": "ACCOUNT_INFOR",
+            "table": "BZ_28468_BM1",
+            "appendType": "REPLACE",
+            "kafkaGroup": ""
+        },
+        "description": "",
+        "diagram": {
+            "x": 80,
+            "y": 160
+        },
+        "active": true,
+        "createdDate": {
+            "$date": "2026-05-15T01:44:25.911Z"
+        }
+    }, {
+        "name": "SAO_KE",
+        "parents": ["ACCOUNT_INFOR"],
+        "order": 2,
+        "sql": "select '1' as STT, msisdn, request_id, account_id, client_code, payment_type, amount, fee, balance, description, source_account_number, regexp_replace(source_customer_name, '[\\\\r]', ' ') source_customer_name, trans_date, created_date, updated_date, PARTITION_DATE, ROW_NUMBER() OVER ( PARTITION BY msisdn, client_id, client_code ORDER BY trans_date ASC ) rank, source_bank_code from ${RT_VTM_VTP_BALANCE_CHANGE} where partition_date >= 20250820 and partition_date <= 20251020 and msisdn in ('00010f63515469292f9b') and msg_type = 'BDSD' having rank = 1",
+        "output": {
+            "tempView": "SAO_KE",
+            "table": "",
+            "appendType": "REPLACE",
+            "kafkaGroup": ""
+        },
+        "description": "",
+        "diagram": {
+            "x": 240,
+            "y": 120
+        },
+        "active": true,
+        "createdDate": {
+            "$date": "2026-05-15T01:44:25.937Z"
+        }
+    }, {
+        "name": "TAIKHOAN_DOIUNG",
+        "parents": ["ACCOUNT_INFOR"],
+        "order": 2,
+        "sql": "select a2.request_id, a2.function_name, a2.process_name, a2.ben_acc_no, a2.ben_acc_no_final, a2.receiver_bank_code, b2.ben_cust_name from ( select distinct request_id, function_name, process_name, ben_acc_no, case when left(ben_acc_no, 3) = 'enc' then card_decrypt(ben_acc_no) else ben_acc_no end as ben_acc_no_final, receiver_bank_code from ${L2_VTM_TRANSACTION_GROUP} where partition_date >= 20250820 and partition_date <= 20251020 and active_msisdn in ('00010f63515469292f9b') and PARTITION_SOURCE <> 'GNOTI' and partition_source <> 'SMS_BANKING' AND PROCESS_CODE NOT IN ('LX9016') ) a2 left join ( select distinct request_id, ben_cust_name from ${L1_BANKPLUS_TRANS_DAILY_HIS} where partition_date >= 20250820 and partition_date <= 20251020 and msisdn in ('00010f63515469292f9b') and ( error_code = '00' or correct_code = '00' ) AND PROCESS_CODE NOT IN ('LX9016') ) b2 on a2.request_id = b2.request_id",
+        "output": {
+            "tempView": "TAIKHOAN_DOIUNG",
+            "table": "",
+            "appendType": "REPLACE",
+            "kafkaGroup": ""
+        },
+        "description": "",
+        "diagram": {
+            "x": 240,
+            "y": 200
+        },
+        "active": true,
+        "createdDate": {
+            "$date": "2026-05-15T01:44:25.937Z"
+        }
+    }, {
+        "name": "OUTPUT",
+        "parents": ["TAIKHOAN_DOIUNG", "SAO_KE"],
+        "order": 3,
+        "sql": "select t1.STT, km.msisdn, km.acc_no, t1.request_id, t1.client_code, t2.function_name, t2.process_name, t1.payment_type, t1.amount, t1.fee, t1.balance, t1.description, t1.source_account_number, t1.source_customer_name, t1.source_bank_code, t2.ben_acc_no_final, t2.ben_cust_name, t2.receiver_bank_code, t1.trans_date, t1.created_date, t1.updated_date, t1.PARTITION_DATE from SAO_KE t1 left join ACCOUNT_INFOR km on t1.msisdn = km.msisdn_encrypted left join TAIKHOAN_DOIUNG t2 on t1.request_id = t2.request_id",
+        "output": {
+            "tempView": "OUTPUT",
+            "table": "BZ_28468_BM2",
+            "appendType": "REPLACE",
+            "kafkaGroup": ""
+        },
+        "description": "",
+        "diagram": {
+            "x": 400,
+            "y": 160
+        },
+        "active": true,
+        "createdDate": {
+            "$date": "2026-05-15T01:44:25.937Z"
+        }
+    }]
+}
