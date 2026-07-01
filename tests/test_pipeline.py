@@ -8,7 +8,8 @@ import pytest
 from unittest.mock import patch
 from pathlib import Path
 
-from text_to_sql_flow.pipeline import run_generation, MAX_RETRIES
+from text_to_sql_flow.pipeline import run_generation, run_evaluation_loop, MAX_RETRIES
+from text_to_sql_flow.evaluator import EvaluationResult
 
 # A valid minimal flow JSON that the mock LLM returns
 VALID_FLOW_JSON = json.dumps({
@@ -72,3 +73,70 @@ class TestPipelineRetry:
         ):
             with pytest.raises(RuntimeError, match=f"after {MAX_RETRIES} retries"):
                 run_generation("test flow", tmp_path)
+
+
+# === Phase 2: Evaluation Loop Tests ===
+
+
+class TestEvaluationLoop:
+    def test_run_evaluation_loop_passes_first_try(self, tmp_path):
+        """Loop ends after one iteration when evaluation passes."""
+        with patch("text_to_sql_flow.pipeline.call_llm", return_value=VALID_FLOW_JSON):
+            with patch(
+                "text_to_sql_flow.pipeline.evaluate_flow",
+                return_value=EvaluationResult(
+                    score=8.5, feedback="Good", dimensions={"correctness": 9}, passed=True
+                ),
+            ):
+                result = run_evaluation_loop("test description", tmp_path, auto=True)
+                assert result.exists()
+
+    def test_run_evaluation_loop_retries_on_low_score(self, tmp_path):
+        """Loop retries when score is below threshold."""
+        eval_results = [
+            EvaluationResult(score=4.0, feedback="Bad", dimensions={}, passed=False),
+            EvaluationResult(score=5.5, feedback="Better", dimensions={}, passed=False),
+            EvaluationResult(score=8.0, feedback="Good", dimensions={}, passed=True),
+        ]
+        with patch("text_to_sql_flow.pipeline.call_llm", return_value=VALID_FLOW_JSON):
+            with patch(
+                "text_to_sql_flow.pipeline.evaluate_flow",
+                side_effect=eval_results,
+            ):
+                result = run_evaluation_loop("test description", tmp_path, auto=True)
+                assert result.exists()
+
+    def test_run_evaluation_loop_stops_at_max_iterations(self, tmp_path):
+        """Loop completes after MAX_ITERATIONS even if never passing."""
+        from text_to_sql_flow.evaluator import MAX_ITERATIONS
+
+        failing = EvaluationResult(score=3.0, feedback="Bad", dimensions={}, passed=False)
+        with patch("text_to_sql_flow.pipeline.call_llm", return_value=VALID_FLOW_JSON):
+            with patch(
+                "text_to_sql_flow.pipeline.evaluate_flow",
+                return_value=failing,
+            ):
+                result = run_evaluation_loop("test description", tmp_path, auto=True)
+                assert result.exists()
+
+    def test_run_evaluation_loop_abort_on_interactive_action(self, tmp_path):
+        """Interactive mode stops when user chooses abort."""
+        failing = EvaluationResult(score=4.0, feedback="Bad", dimensions={}, passed=False)
+        with patch("text_to_sql_flow.pipeline.call_llm", return_value=VALID_FLOW_JSON):
+            with patch("text_to_sql_flow.pipeline.evaluate_flow", return_value=failing):
+                with patch(
+                    "text_to_sql_flow.pipeline._get_interactive_action",
+                    return_value="abort",
+                ):
+                    result = run_evaluation_loop(
+                        "test description", tmp_path, interactive=True
+                    )
+                    assert result.exists()
+
+    def test_tune_prompt_appends_feedback(self):
+        """_tune_prompt includes original description and feedback."""
+        from text_to_sql_flow.pipeline import _tune_prompt
+
+        tuned = _tune_prompt("original desc", "fix the SQL")
+        assert "original desc" in tuned
+        assert "fix the SQL" in tuned

@@ -4,12 +4,20 @@ Uses Typer for command-line parsing with automatic ``--help`` support.
 """
 
 import typer
+import click
 from pathlib import Path
+from typing import Optional
+from rich.console import Console
 
 app = typer.Typer(
     name="text-to-sql-flow",
     help="Generate Spark SQL ETL flows from business descriptions using LLM",
 )
+
+_PROVIDER_CHOICES = [
+    "openai", "claude", "deepseek",
+    "nvidia", "openrouter", "opencode",
+]
 
 
 @app.command()
@@ -26,14 +34,67 @@ def generate(
         file_okay=False,
         dir_okay=True,
     ),
+    provider: str = typer.Option(
+        "openai",
+        "--provider",
+        "-p",
+        help="LLM provider to use for generation",
+        click_type=click.Choice(_PROVIDER_CHOICES),
+        case_sensitive=False,
+    ),
+    config: Optional[Path] = typer.Option(
+        None,
+        "--config",
+        "-c",
+        help="Path to YAML config file (default: ./text-to-sql-flow.yaml)",
+        exists=False,
+        file_okay=True,
+        dir_okay=False,
+    ),
+    html: bool = typer.Option(
+        False,
+        "--html",
+        help="Generate HTML report alongside JSON output",
+    ),
+    auto: bool = typer.Option(
+        False,
+        "--auto",
+        help="Run evaluation loop automatically without prompts (for CI/batch)",
+    ),
+    interactive: bool = typer.Option(
+        False,
+        "--interactive",
+        help="Pause at each evaluation iteration for user review",
+    ),
 ):
     """Generate a Spark SQL flow from a business description.
 
-    Calls an LLM to analyze the description and produce a structured
-    Spark SQL ETL flow definition, then writes the result as a JSON file.
+    By default, generates the flow once and writes JSON output.
+    Use --auto to enable the evaluate-tune loop (auto-retry until quality threshold met).
+    Use --interactive to review each evaluation result and choose retry/abort/continue.
     """
-    # Lazy import — pipeline module is created in Plan 02
-    from text_to_sql_flow.pipeline import run_generation
+    from text_to_sql_flow.pipeline import run_generation, run_evaluation_loop
 
-    result_path = run_generation(description=description, output_dir=output)
-    typer.echo(f"Flow generated successfully: {result_path}")
+    console = Console()
+
+    if auto or interactive:
+        with console.status("[bold cyan]Running evaluation loop...") as status:
+            result_path = run_evaluation_loop(
+                description=description,
+                output_dir=output,
+                auto=auto,
+                interactive=interactive,
+                provider=provider,
+                config_path=config,
+                html=html,
+            )
+        console.print(f"[green]Flow generated successfully:[/green] {result_path}")
+    else:
+        result_path = run_generation(
+            description=description,
+            output_dir=output,
+            provider=provider,
+            config_path=config,
+            html=html,
+        )
+        console.print(f"[green]Flow generated successfully:[/green] {result_path}")

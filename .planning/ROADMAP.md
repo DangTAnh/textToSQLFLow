@@ -42,9 +42,9 @@
 5. `--interactive` dừng ở mỗi iteration cho user review
 
 **Plans:**
-- [ ] 02-01-PLAN.md — Evaluator module: rubric prompt, score parsing, evaluate_flow function
-- [ ] 02-02-PLAN.md — Loop + CLI: evaluate-tune loop, --auto/--interactive flags, Rich progress bar
-- [ ] 02-03-PLAN.md — Tests: evaluator unit tests, pipeline loop tests, CLI flag tests
+- [x] 02-01-PLAN.md — Evaluator module: rubric prompt, score parsing, evaluate_flow function
+- [x] 02-02-PLAN.md — Loop + CLI: evaluate-tune loop, --auto/--interactive flags, Rich progress bar
+- [x] 02-03-PLAN.md — Tests: evaluator unit tests, pipeline loop tests, CLI flag tests
 
 **Phase 3: Multi-Provider & Polish**
 **Goal:** Hỗ trợ nhiều LLM provider + HTML report + config file
@@ -57,9 +57,9 @@
 3. HTML report hiển thị flow diagram + evaluation results
 
 **Plans:**
-- [ ] 03-01-PLAN.md — Config module + litellm multi-provider abstraction
-- [ ] 03-02-PLAN.md — HTML report renderer (Jinja2, dark theme)
-- [ ] 03-03-PLAN.md — Wire CLI + pipeline with --provider, --config, --html flags
+- [x] 03-01-PLAN.md — Config module + litellm multi-provider abstraction
+- [x] 03-02-PLAN.md — HTML report renderer (Jinja2, dark theme)
+- [x] 03-03-PLAN.md — Wire CLI + pipeline with --provider, --config, --html flags
 
 ---
 
