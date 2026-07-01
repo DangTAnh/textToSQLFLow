@@ -8,24 +8,38 @@ CLI tool sinh luồng Spark SQL dạng JSON từ mô tả nghiệp vụ bằng L
 
 Data engineer có thể đưa mô tả nghiệp vụ và nhận luồng SQL Spark sẵn sàng chạy, không cần tự viết từng câu SQL.
 
+## Current Milestone: v1.1 CLI GUI & UX Improvements
+
+**Goal:** Cải thiện trải nghiệm CLI với giao diện tương tác, hỗ trợ nhập nhiều mô tả, provider mặc định tối ưu, và .env config.
+
+**Target features:**
+- CLI GUI (rich-based interactive interface) để nhập nhiều mô tả nghiệp vụ
+- Đổi default provider thành `opencode/deepseek-v4-flash-free`
+- Hỗ trợ `.env` file để load API key
+- Provider switching UI + GUI nhập API key khi chưa có
+
 ## Requirements
 
-### Validated
+### Validated ✅ (v1.0)
 
-(None yet — ship to validate)
+- **LLM-01**: Người dùng nhập mô tả nghiệp vụ dạng inline (CLI argument) — ✅
+- **LLM-02**: Gọi LLM sinh luồng SQL dạng JSON dựa trên mô tả — ✅
+- **LLM-03**: Hỗ trợ nhiều LLM provider: OpenAI, Claude, Deepseek, NVIDIA NIM, OpenRouter, OpenCode — ✅
+- **LLM-04**: Cấu hình provider qua CLI flag hoặc config file — ✅
+- **EVAL-01**: Đánh giá luồng SQL bằng LLM (chất lượng, đúng nghiệp vụ) — ✅
+- **EVAL-02**: Tuning luồng dựa trên kết quả đánh giá — ✅
+- **EVAL-03**: Loop: nếu chưa OK thì quay lại bước đánh giá — ✅
+- **EVAL-04**: Hỗ trợ mode --auto và --interactive — ✅
+- **OUT-01**: Xuất kết quả ra file JSON chứa cấu trúc luồng — ✅
+- **OUT-02**: Xuất HTML report có sơ đồ luồng và bảng đánh giá — ✅
 
 ### Active
 
-- [ ] **LLM-01**: Người dùng nhập mô tả nghiệp vụ dạng inline (CLI argument)
-- [ ] **LLM-02**: Gọi LLM sinh luồng SQL dạng JSON dựa trên mô tả
-- [ ] **LLM-03**: Hỗ trợ nhiều LLM provider: OpenAI, Claude, Deepseek, NVIDIA NIM, OpenRouter, OpenCode
-- [ ] **LLM-04**: Cấu hình provider qua CLI flag hoặc config file
-- [ ] **EVAL-01**: Đánh giá luồng SQL bằng LLM (chất lượng, đúng nghiệp vụ)
-- [ ] **EVAL-02**: Tuning luồng dựa trên kết quả đánh giá
-- [ ] **EVAL-03**: Loop: nếu chưa OK thì quay lại bước đánh giá
-- [ ] **EVAL-04**: Hỗ trợ mode --auto (tự động loop đến khi OK) và --interactive (dừng review từng bước)
-- [ ] **OUT-01**: Xuất kết quả ra file JSON chứa cấu trúc luồng
-- [ ] **OUT-02**: Xuất HTML report có sơ đồ luồng và bảng đánh giá
+- [ ] **GUI-01**: CLI interactive mode cho phép nhập nhiều mô tả nghiệp vụ
+- [ ] **GUI-02**: Giao diện chọn provider (danh sách tương tác)
+- [ ] **GUI-03**: Form nhập API key inline nếu provider chưa có key
+- [ ] **CFG-01**: Load API key từ `.env` file
+- [ ] **CFG-02**: Default provider = opencode/deepseek-v4-flash-free
 
 ### Out of Scope
 
@@ -75,4 +89,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-01 after initialization*
+*Last updated: 2026-07-01 after milestone v1.1 initialization*
