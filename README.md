@@ -27,7 +27,7 @@ python -m text_to_sql_flow batch descriptions.txt
 |-----------|-------|
 | **3 CLI modes** | `generate`, `interactive` (REPL), `batch` (file) |
 | **6 LLM providers** | OpenAI, Claude, DeepSeek, NVIDIA NIM, OpenRouter, OpenCode |
-| **Auto evaluation** | 5-dim rubric, score ≥ 7.0, tuning loop (max 5 lần) |
+| **Auto evaluation** | 5-dim rubric, score ≥ 7.0 (default), tuning loop (max 5 lần) |
 | **HTML report** | Jinja2 template, dark theme |
 | **Pydantic validation** | Schema validation cho flow JSON |
 | **OpenCode default** | Model free, cần OPENCODE\_API\_KEY |
