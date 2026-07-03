@@ -50,6 +50,14 @@ class TestPipelineSuccess:
             assert data["name"] == "MOCKED_FLOW"
             assert len(data["steps"]) == 1
 
+    def test_run_generation_saves_description_txt(self, tmp_path):
+        """description.txt is saved alongside the output for re-generate."""
+        with patch("text_to_sql_flow.pipeline.call_llm", return_value=VALID_FLOW_JSON):
+            result = run_generation("my business description", tmp_path)
+            desc_file = result.parent / "description.txt"
+            assert desc_file.exists()
+            assert desc_file.read_text() == "my business description"
+
 
 class TestPipelineRetry:
     def test_run_generation_retries_on_bad_json(self, tmp_path):

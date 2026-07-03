@@ -43,3 +43,45 @@ class TestCliImport:
             cmd.callback and cmd.callback.__name__ == "generate"
             for cmd in app.registered_commands
         )
+
+    def test_cli_app_has_interactive_command(self):
+        """App has an interactive command."""
+        from text_to_sql_flow.cli import app
+
+        assert any(
+            cmd.callback and cmd.callback.__name__ == "interactive"
+            for cmd in app.registered_commands
+        )
+
+    def test_interactive_help_shows(self):
+        """--help for interactive shows the command description."""
+        import subprocess, sys
+
+        result = subprocess.run(
+            [sys.executable, "-m", "text_to_sql_flow", "interactive", "--help"],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0
+        assert "interactive" in result.stdout.lower()
+
+    def test_cli_app_has_batch_command(self):
+        """App has a batch command."""
+        from text_to_sql_flow.cli import app
+
+        assert any(
+            cmd.callback and cmd.callback.__name__ == "batch"
+            for cmd in app.registered_commands
+        )
+
+    def test_batch_help_shows(self):
+        """--help for batch shows the command description."""
+        import subprocess, sys
+
+        result = subprocess.run(
+            [sys.executable, "-m", "text_to_sql_flow", "batch", "--help"],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0
+        assert "batch" in result.stdout.lower()

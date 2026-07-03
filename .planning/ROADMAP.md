@@ -7,9 +7,9 @@
 | 1 | Core Pipeline | Pipeline cơ bản: CLI nhận mô tả → LLM gen flow → parse/validate → JSON output | CLI-01, CLI-02, CLI-05, GEN-01, GEN-02, GEN-03, GEN-04, GEN-05, OUT-01 | 4 |
 | 2 | Evaluate & Tune | Evaluation loop: đánh giá chất lượng → tune → loop → auto/interactive mode | CLI-06, EVAL-01, EVAL-02, EVAL-03, EVAL-04, EVAL-05, EVAL-06 | 5 |
 | 3 | Multi-Provider & Polish | Hỗ trợ nhiều LLM provider + HTML report + config file | CLI-03, CLI-04, OUT-02 | 3 |
-| 4 | Config Foundation | .env API key loading + default provider tối ưu | CFG-01, CFG-02 | 3 |
-| 5 | Interactive Mode | Rich CLI interactive mode: nhập mô tả, chọn provider, nhập key, REPL loop | GUI-01, GUI-02, GUI-03, GUI-04 | 4 |
-| 6 | Batch & Results | Batch mode + result summary + re-generate flow cũ | GUI-05, GUI-06, GUI-07 | 4 |
+| 4 | Config Foundation ✅ | .env API key loading + default provider tối ưu | CFG-01, CFG-02 | 3 |
+| 5 | Interactive Mode ✅ | Rich CLI interactive mode: nhập mô tả, chọn provider, nhập key, REPL loop | GUI-01, GUI-02, GUI-03, GUI-04 | 4 |
+| 6 | Batch & Results ✅ | Batch mode + result summary + re-generate flow cũ | GUI-05, GUI-06, GUI-07 | 4 |
 
 ---
 
@@ -68,7 +68,7 @@
 
 ## v1.1 (Current Milestone)
 
-### Phase 4: Config Foundation
+### Phase 4: Config Foundation ✅
 **Goal:** User can configure API keys via `.env` file and use the optimal default provider without manual flags
 **Depends on**: Phase 3 (Multi-Provider & Polish)
 **Requirements**: CFG-01, CFG-02
@@ -76,9 +76,9 @@
 1. User places `OPENAI_API_KEY=sk-...` in `.env` file → tool loads it automatically without `--api-key` or config YAML
 2. User runs tool without `--provider` flag → tool uses `opencode/deepseek-v4-flash-free` by default
 3. API key priority chain is honored: `.env` > environment variable > config YAML > error prompt
-**Plans**: TBD
+**Plans**: [x] 04-01-PLAN.md — .env loader + default provider
 
-### Phase 5: Interactive Mode
+### Phase 5: Interactive Mode ✅
 **Goal:** User can generate multiple flows through an interactive rich CLI without remembering flags or config details
 **Depends on**: Phase 4 (Config Foundation)
 **Requirements**: GUI-01, GUI-02, GUI-03, GUI-04
@@ -87,10 +87,9 @@
 2. User selects a provider from an interactive rich list (not `--provider` flag), showing available options with descriptions
 3. If selected provider has no API key in `.env` / env var / config, tool prompts user to enter it inline
 4. After each flow generation, tool asks "Generate another? (y/n)" — user can continue or exit
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: [x] 05-01-PLAN.md — interactive mode (interactive.py + cli.py)
 
-### Phase 6: Batch & Results
+### Phase 6: Batch & Results ✅
 **Goal:** User can process descriptions from a file, view a consolidated summary of all generated flows, and regenerate any past flow with different settings
 **Depends on**: Phase 5 (Interactive Mode)
 **Requirements**: GUI-05, GUI-06, GUI-07
@@ -144,4 +143,4 @@ graph LR
 **Coverage: 9/9 v1.1 requirements mapped ✓**
 
 ---
-*Roadmap updated: 2026-07-01 (v1.1 phases 4-6 added)*
+*Roadmap updated: 2026-07-02 (Phase 4 completed)*

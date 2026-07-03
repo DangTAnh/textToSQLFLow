@@ -28,9 +28,7 @@ PROVIDER_MODEL_MAP: dict[str, str] = {
     "deepseek": "deepseek-chat",
     "nvidia": "nvidia/nemotron-4-340b-instruct",
     "openrouter": "openrouter/auto",
-    # opencode: litellm may not natively support "opencode" prefix.
-    # If requests fail, try "openrouter/opencode-zen-7b" instead.
-    "opencode": "opencode-zen-7b",
+    "opencode": "deepseek-v4-flash-free",
 }
 
 MAX_RETRIES = 3
@@ -39,7 +37,7 @@ MAX_RETRIES = 3
 def call_llm(
     system_prompt: str,
     user_prompt: str,
-    provider: str = "openai",
+    provider: str = "opencode",
     config: Optional[AppConfig] = None,
 ) -> str:
     """Call an LLM via litellm with retry and exponential backoff.
@@ -77,11 +75,17 @@ def call_llm(
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
-        "api_key": api_key,
         "temperature": config.temperature if config else 0.3,
     }
+    if api_key:
+        kwargs["api_key"] = api_key
     if config and config.max_tokens:
         kwargs["max_tokens"] = config.max_tokens
+
+    # OpenCode Zen uses a custom OpenAI-compatible endpoint
+    if provider == "opencode":
+        kwargs["model"] = f"openai/{kwargs['model']}"
+        kwargs["api_base"] = "https://opencode.ai/zen/v1"
 
     last_error: Optional[Exception] = None
 
