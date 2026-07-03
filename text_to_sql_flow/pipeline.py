@@ -1,8 +1,8 @@
-"""Pipeline controller — wires together the LLM client, prompts, parser, and writer.
+"""Pipeline controller — wires together the LLM provider, prompts, parser, and writer.
 
 Orchestrates the end-to-end flow:
 1. Build prompts from business description
-2. Call LLM (with API-level retry in ``client.py``)
+2. Call LLM (with API-level retry in ``provider.py``)
 3. Parse and validate JSON (with format-level retry up to MAX_RETRIES)
 4. Write validated Flow to JSON file
 5. Optionally generate HTML report (--html flag)
@@ -10,6 +10,7 @@ Orchestrates the end-to-end flow:
 """
 
 import logging
+import shutil
 from pathlib import Path
 from typing import Optional
 
@@ -21,7 +22,7 @@ from text_to_sql_flow.parsers.flow_parser import parse_flow_response, extract_va
 from text_to_sql_flow.output.json_writer import write_flow_json
 from text_to_sql_flow.types import Flow
 from text_to_sql_flow.evaluator import evaluate_flow, EvaluationResult, THRESHOLD, MAX_ITERATIONS
-from text_to_sql_flow.config import load_config
+from text_to_sql_flow.config import AppConfig, load_config
 
 logger = logging.getLogger(__name__)
 MAX_RETRIES = 3
@@ -30,9 +31,10 @@ MAX_RETRIES = 3
 def run_generation(
     description: str,
     output_dir: Path,
-    provider: str = "openai",
+    provider: str = "opencode",
     config_path: Optional[Path] = None,
     html: bool = False,
+    config: Optional[AppConfig] = None,
 ) -> Path:
     """Execute the full generation pipeline.
 
@@ -42,6 +44,7 @@ def run_generation(
         provider: LLM provider name (one of PROVIDER_MODEL_MAP keys).
         config_path: Optional path to YAML config file.
         html: If True, generate HTML report alongside JSON.
+        config: Pre-built AppConfig override (takes precedence over config_path).
 
     Returns:
         Path to the generated JSON file.
@@ -49,8 +52,8 @@ def run_generation(
     Raises:
         RuntimeError: If generation fails after all retries.
     """
-    config = load_config(config_path)
-    active_provider = provider if provider != "openai" else config.provider
+    config = config or load_config(config_path)
+    active_provider = provider if provider != "opencode" else config.provider
 
     system_prompt, user_prompt = build_generation_prompt(description)
     last_error: Optional[str] = None
@@ -102,6 +105,9 @@ def run_generation(
         output_path = write_flow_json(flow, output_dir)
         logger.info("Flow generated successfully: %s", output_path)
 
+        # Save original description alongside output (for re-generate)
+        (output_dir / "description.txt").write_text(description, encoding="utf-8")
+
         # Step 4: Optional HTML report
         if html:
             from text_to_sql_flow.output.html_renderer import render_html_report
@@ -123,9 +129,11 @@ def run_evaluation_loop(
     output_dir: Path,
     auto: bool = False,
     interactive: bool = False,
-    provider: str = "openai",
+    provider: str = "opencode",
     config_path: Optional[Path] = None,
     html: bool = False,
+    config: Optional[AppConfig] = None,
+    threshold: float = THRESHOLD,
 ) -> Path:
     """Run generate-evaluate-tune loop.
 
@@ -141,16 +149,25 @@ def run_evaluation_loop(
         provider: LLM provider name.
         config_path: Optional path to YAML config file.
         html: If True, generate HTML report alongside JSON.
+        config: Pre-built AppConfig override (takes precedence over config_path).
+        threshold: Score threshold for passing (defaults to THRESHOLD constant).
 
     Returns:
         Path to the final generated JSON file.
     """
     current_description = description
-    last_result: EvaluationResult | None = None
     flow_path: Path | None = None
 
+    # Load config once for the entire loop
+    config = config or load_config(config_path)
+    active_provider = provider if provider != "opencode" else config.provider
+
+    # Track evaluated iterations for best-pick at the end
+    scored: list[tuple[float, int, Path]] = []
+
     for iteration in range(1, MAX_ITERATIONS + 1):
-        logger.info("Evaluation loop iteration %d/%d", iteration, MAX_ITERATIONS)
+        typer.echo("")
+        typer.echo(f"── Iteration {iteration}/{MAX_ITERATIONS} ─{'─' * (20 + len(str(iteration)))}")
 
         # Step 1: Generate
         flow_path = run_generation(
@@ -159,39 +176,23 @@ def run_evaluation_loop(
             provider=provider,
             config_path=config_path,
             html=html,
+            config=config,
         )
 
         # Step 2: Evaluate
         try:
-            result = evaluate_flow(flow_path)
+            result = evaluate_flow(flow_path, provider=active_provider, config=config, threshold=threshold)
         except Exception as e:
             logger.error("Evaluation failed: %s", e)
             if iteration == MAX_ITERATIONS:
                 return flow_path
             continue
 
-        last_result = result
+        scored.append((result.score, iteration, flow_path))
 
-        # Step 3: Check if passed
-        if result.passed:
-            logger.info(
-                "Flow passed evaluation: score=%.1f/10 (threshold=%.1f)",
-                result.score,
-                THRESHOLD,
-            )
-            return flow_path
-
-        logger.info(
-            "Score %.1f/10 below threshold %.1f (iteration %d/%d)",
-            result.score,
-            THRESHOLD,
-            iteration,
-            MAX_ITERATIONS,
-        )
-
-        # Step 4: Interactive mode — ask user
+        # Step 3: Interactive mode — ask user
         if interactive:
-            _show_interactive_prompt(result, iteration)
+            _show_interactive_prompt(result, iteration, threshold)
             action = _get_interactive_action()
             if action == "abort":
                 logger.info("User aborted evaluation loop")
@@ -200,41 +201,50 @@ def run_evaluation_loop(
                 logger.info("User chose to continue with current output")
                 return flow_path
 
+        # Step 4: Check if passed
+        if result.passed:
+            typer.echo(f"✅ PASSED — score {result.score:.1f}/10 ≥ threshold {threshold}/10")
+            return flow_path
+
+        typer.echo(f"⏳ Score {result.score:.1f}/10 below threshold {threshold}/10 — tuning...")
+
         # Step 5: Tune prompt with feedback (per EVAL-03)
         if iteration < MAX_ITERATIONS:
-            current_description = _tune_prompt(current_description, result.feedback)
-            logger.info(
-                "Tuned prompt with evaluator feedback (iteration %d -> %d)",
-                iteration,
-                iteration + 1,
-            )
+            current_description = _tune_prompt(current_description, result.feedback, threshold)
+            logger.info("Tuned prompt (iteration %d -> %d)", iteration, iteration + 1)
 
-    logger.warning(
-        "Max iterations (%d) reached. Last score: %.1f/10",
-        MAX_ITERATIONS,
-        last_result.score if last_result else 0,
-    )
-    return flow_path or output_dir / "last_output.json"
+    # Max iterations exhausted — pick best scored (earliest iteration on tie)
+    if scored:
+        scored.sort(key=lambda x: (-x[0], x[1]))
+        best = scored[0]
+        typer.echo(f"⚠️ Max iterations ({MAX_ITERATIONS}) reached. Best: score {best[0]:.1f} (iteration {best[1]})")
+        # Copy best flow to "best" file in output dir for easy reference
+        best_path = output_dir / f"best_score_{best[0]:.1f}.json"
+        shutil.copy2(best[2], best_path)
+        return best[2]
+    else:
+        logger.warning("Max iterations (%d) reached. No evaluations succeeded.", MAX_ITERATIONS)
+        return flow_path or output_dir / "last_output.json"
 
 
-def _tune_prompt(description: str, feedback: str) -> str:
+def _tune_prompt(description: str, feedback: str, threshold: float = THRESHOLD) -> str:
     """Append evaluator feedback to the description for the next iteration."""
     return (
         f"{description}\n\n"
         f"---\n"
-        f"Feedback from previous evaluation (score < {THRESHOLD}/10):\n"
+        f"Feedback from previous evaluation (score < {threshold}/10):\n"
         f"{feedback}\n\n"
         f"Please address the feedback above and regenerate an improved Spark SQL flow."
     )
 
 
-def _show_interactive_prompt(result: EvaluationResult, iteration: int) -> None:
+def _show_interactive_prompt(result: EvaluationResult, iteration: int, threshold: float = THRESHOLD) -> None:
     """Display evaluation result and prompt for user action."""
     typer.echo("")
     typer.echo("=" * 50)
     typer.echo(f"Iteration {iteration}/{MAX_ITERATIONS} — Evaluation Result")
     typer.echo("=" * 50)
-    typer.echo(f"Overall Score: {result.score:.1f}/10 (threshold: {THRESHOLD}/10)")
+    typer.echo(f"Overall Score: {result.score:.1f}/10 (threshold: {threshold}/10)")
     typer.echo("")
     typer.echo("Dimensions:")
     for dim, score in sorted(result.dimensions.items()):

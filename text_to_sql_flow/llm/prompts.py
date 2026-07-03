@@ -42,21 +42,56 @@ The JSON must conform to this schema:
     ]
 }
 
+## ETL Structure Requirements
+
+Always decompose the flow into multiple granular steps — one logical operation
+per step. A typical 4-step structure (expand as needed):
+
+1. **LOAD** — read source table(s), optionally select columns and cast types.
+2. **FILTER** / **TRANSFORM** — apply WHERE conditions, clean data, join tables.
+3. **AGGREGATE** — group by dimensions, compute measures.
+4. **SAVE** — write final result to output table.
+
+Each step must be a separate JSON object in the `steps` array. Do NOT merge
+multiple operations into one SQL statement unless the operations are trivially
+simple.
+
 ## Rules
 
-1. **steps.name** — must be unique within the flow. Use UPPER_SNAKE_CASE.
-2. **steps.parents** — list names of steps whose temp views or tables this step reads.
-   Leave empty for the first step(s).
-3. **steps.order** — execution order, ascending. Steps with the same order
-   execute in parallel.
-4. **steps.sql** — the Spark SQL statement. Use ${table_var} for table variables
-   and $[param_var] for parameters supplied at runtime. UDFs are already
-   optimized and available.
+1. **steps.name** — must be unique within the flow. Use UPPER_SNAKE_CASE with
+   a verb prefix: `LOAD_<SOURCE>`, `FILTER_<CONDITION>`, `AGGREGATE_<METRIC>`,
+   `SAVE_<TARGET>`. Names must describe WHAT the step does, not just the output.
+2. **steps.parents** — every step except the first must list the step name(s)
+   whose temp views it reads. This creates a proper DAG. Example:
+   a. `LOAD_INVOICE` → parents: `[]`
+   b. `FILTER_PAID_INVOICE` → parents: `["LOAD_INVOICE"]`
+   c. `AGGREGATE_REVENUE` → parents: `["FILTER_PAID_INVOICE"]`
+   d. `SAVE_REPORT` → parents: `["AGGREGATE_REVENUE"]`
+3. **steps.order** — execution order, ascending. Sequential steps increment
+   by 1; steps with the same order run in parallel.
+4. **steps.sql** — the Spark SQL statement. For LOAD steps use a simple SELECT
+   from the source. Reference upstream temp views directly in SQL.
+   Use `${TABLE_VAR}` for external table names (input sources, output targets)
+   — never hardcode table names as plain strings. Use `$[PARAM_VAR]` for
+   runtime parameters. UDFs are already optimized and available.
 5. **steps.output.tempView** — name of the Spark temp view caching the result.
-6. **steps.output.table** — target HDFS table in parquet format. Empty string
-   means the result is only a temp view.
+   Should match the step name (e.g. step `LOAD_INVOICE` → temp view
+   `LOAD_INVOICE`).
+6. **steps.output.table** — target HDFS table in parquet format. Only the final
+   SAVE step should set a table name; intermediate steps set empty string.
+   Use `${TABLE_VAR}` here too when the table name is a variable.
 7. **steps.active** — true for enabled steps, false for disabled.
 8. **Output ONLY valid JSON** — no extra text before or after.
+9. **Data quality** — add WHERE clause filters to exclude NULLs in critical
+   columns (dates, measure/amount fields, join keys). Handle NULLs in
+   aggregations safely: use `COALESCE` / `IFNULL` or filter them out explicitly
+   so logic like `SUM(amount)` or `MONTH(invoice_date)` never receives NULL
+   input.
+10. **Date functions** — use standard Spark SQL functions only:
+    `DATE_TRUNC('month', date_col)` for month truncation,
+    `DATE_FORMAT(date_col, 'yyyy-MM')` for month formatting.
+    Do NOT use `TRUNC(date_col, 'MONTH')` — it is not portable across Spark
+    versions.
 """
 
 

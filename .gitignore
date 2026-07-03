@@ -23,3 +23,6 @@ Thumbs.db
 # Temp output
 ./output/
 tmp_test/
+.claude/
+.claude/
+.claude/

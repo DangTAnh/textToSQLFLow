@@ -1,11 +1,11 @@
 """LLM-based evaluator for Spark SQL ETL flow quality.
 
-Uses gpt-4o to score a generated flow against a 5-dimension rubric:
-correctness, completeness, Spark best practices, dependency correctness,
-and code quality.
+Uses the same LLM provider as generation to score a generated flow
+against a 5-dimension rubric: correctness, completeness, Spark best
+practices, dependency correctness, and code quality.
 
 Usage::
-    result = evaluate_flow(Path("output/flow.json"))
+    result = evaluate_flow(Path("output/flow.json"), provider="opencode")
     if result.passed:
         print(f"Score: {result.score}/10")
 """
@@ -13,9 +13,11 @@ Usage::
 import json
 import logging
 from pathlib import Path
+from typing import Optional
 from pydantic import BaseModel
 
-from text_to_sql_flow.llm.client import call_llm
+from text_to_sql_flow.llm.provider import call_llm
+from text_to_sql_flow.config import AppConfig
 
 logger = logging.getLogger(__name__)
 
@@ -27,14 +29,11 @@ THRESHOLD = 7.0
 MAX_ITERATIONS = 5
 """Maximum iterations for evaluate-tune loop (per EVAL-04)."""
 
-EVALUATOR_MODEL = "gpt-4o"
-"""Model used for evaluation (same as generation)."""
-
 # ── Prompt ────────────────────────────────────────────────────────────────
 
 EVALUATOR_SYSTEM_PROMPT = """You are a senior data engineer evaluating a Spark SQL ETL flow definition.
 
-Evaluate the flow JSON on these 5 dimensions, each scored 1-10:
+Evaluate the flow JSON on these 7 dimensions, each scored 1-10:
 
 1. **correctness** — SQL syntax correctness, proper Spark SQL functions,
    no logical errors or column mismatches.
@@ -42,17 +41,28 @@ Evaluate the flow JSON on these 5 dimensions, each scored 1-10:
 2. **completeness** — All required steps from the business description
    are covered, intermediate transformations exist.
 
-3. **spark_best_practices** — Uses broadcast hints for small tables,
-   avoids UDFs where built-in functions suffice, proper partitioning,
-   uses temp views appropriately.
+3. **granularity** — ETL is decomposed into multiple granular steps
+   (e.g. LOAD → FILTER → AGGREGATE → SAVE) rather than one monolithic
+   step. Each logical operation has its own node in the DAG. Penalize
+   single-step flows heavily.
 
-4. **dependency_correctness** — Step parents list matches actual
+4. **data_quality** — NULL-safe aggregations (COALESCE/IFNULL or explicit
+   filters), WHERE clauses exclude NULLs on critical columns (dates, measures,
+   join keys) so no downstream logic receives NULL input.
+
+4. **spark_best_practices** — Uses `DATE_TRUNC`/`DATE_FORMAT` (not `TRUNC`),
+   `${TABLE_VAR}` for table names (not hardcoded), broadcast hints for
+   small tables, avoids UDFs where built-in functions suffice, proper
+   partitioning, uses temp views appropriately.
+
+5. **dependency_correctness** — Step parents list matches actual
    table/view dependencies, execution order is correct (parallel steps
-   have same order number).
+   have same order number). Each step declares proper parent references
+   forming a valid DAG — no orphan steps, no circular dependencies.
 
-5. **code_quality** — SQL is readable, uses consistent naming
-   (UPPER_SNAKE_CASE), descriptions are meaningful, diagram positions
-   are reasonable.
+6. **code_quality** — SQL is readable, uses consistent naming with verb
+   prefixes (`LOAD_*`, `FILTER_*`, `AGGREGATE_*`, `SAVE_*`), descriptions
+   are meaningful, diagram positions are reasonable.
 
 Respond with ONLY valid JSON in this exact shape (no extra text):
 
@@ -61,6 +71,8 @@ Respond with ONLY valid JSON in this exact shape (no extra text):
     "dimensions": {
         "correctness": 8,
         "completeness": 7,
+        "granularity": 6,
+        "data_quality": 7,
         "spark_best_practices": 6,
         "dependency_correctness": 8,
         "code_quality": 7
@@ -107,13 +119,14 @@ def build_evaluation_prompt(flow_dict: dict) -> tuple[str, str]:
     return EVALUATOR_SYSTEM_PROMPT, user_prompt
 
 
-def parse_evaluation_response(response_text: str) -> EvaluationResult:
+def parse_evaluation_response(response_text: str, threshold: float = THRESHOLD) -> EvaluationResult:
     """Parse the LLM evaluator's JSON response into an EvaluationResult.
 
     Handles pure JSON, ```json code blocks, and extra text around the JSON.
 
     Args:
         response_text: Raw text returned by the LLM evaluator.
+        threshold: Score threshold for passing (defaults to THRESHOLD constant).
 
     Returns:
         A validated EvaluationResult.
@@ -154,7 +167,7 @@ def parse_evaluation_response(response_text: str) -> EvaluationResult:
         raise ValueError("Evaluator response missing 'feedback' field")
 
     dimensions = data.get("dimensions", {})
-    passed = float(score) >= THRESHOLD
+    passed = float(score) >= threshold
 
     return EvaluationResult(
         score=float(score),
@@ -164,11 +177,19 @@ def parse_evaluation_response(response_text: str) -> EvaluationResult:
     )
 
 
-def evaluate_flow(flow_path: Path) -> EvaluationResult:
+def evaluate_flow(
+    flow_path: Path,
+    provider: str = "opencode",
+    config: Optional[AppConfig] = None,
+    threshold: float = THRESHOLD,
+) -> EvaluationResult:
     """Evaluate a generated flow JSON file using the LLM evaluator.
 
     Args:
         flow_path: Path to the generated flow JSON file.
+        provider: LLM provider name (defaults to "openai").
+        config: Optional AppConfig for model/temperature overrides.
+        threshold: Score threshold for passing (defaults to THRESHOLD constant).
 
     Returns:
         An EvaluationResult with score, feedback, and pass/fail status.
@@ -181,9 +202,9 @@ def evaluate_flow(flow_path: Path) -> EvaluationResult:
     if not flow_path.exists():
         raise ValueError(f"Flow file not found: {flow_path}")
 
-    with open(flow_path, "r") as f:
+    with open(flow_path, "r", encoding="utf-8") as f:
         flow_dict = json.load(f)
 
     system_prompt, user_prompt = build_evaluation_prompt(flow_dict)
-    response_text = call_llm(system_prompt, user_prompt)
-    return parse_evaluation_response(response_text)
+    response_text = call_llm(system_prompt, user_prompt, provider=provider, config=config)
+    return parse_evaluation_response(response_text, threshold=threshold)

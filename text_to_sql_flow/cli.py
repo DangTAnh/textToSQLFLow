@@ -35,7 +35,7 @@ def generate(
         dir_okay=True,
     ),
     provider: str = typer.Option(
-        "openai",
+        "opencode",
         "--provider",
         "-p",
         help="LLM provider to use for generation",
@@ -98,3 +98,70 @@ def generate(
             html=html,
         )
         console.print(f"[green]Flow generated successfully:[/green] {result_path}")
+
+
+@app.command()
+def interactive():
+    """Run interactive REPL mode: input descriptions, choose providers, loop.
+
+    No flags needed — everything is prompted interactively.
+    Uses the evaluate-tune loop automatically for each generation.
+    """
+    from text_to_sql_flow.interactive import interactive_session
+    interactive_session()
+
+
+@app.command()
+def batch(
+    file: Path = typer.Argument(
+        ...,
+        help="Text file with one business description per line (blank/# lines skipped)",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+    ),
+    output: Path = typer.Option(
+        "./output",
+        "--output",
+        "-o",
+        help="Root output directory (each flow gets a subdir)",
+        file_okay=False,
+        dir_okay=True,
+    ),
+    provider: str = typer.Option(
+        "opencode",
+        "--provider",
+        "-p",
+        help="LLM provider for all descriptions",
+        click_type=click.Choice(_PROVIDER_CHOICES),
+        case_sensitive=False,
+    ),
+    config: Optional[Path] = typer.Option(
+        None,
+        "--config",
+        "-c",
+        help="Path to YAML config file",
+        exists=False,
+        file_okay=True,
+        dir_okay=False,
+    ),
+    html: bool = typer.Option(
+        False,
+        "--html",
+        help="Generate HTML report alongside each JSON output",
+    ),
+):
+    """Process multiple descriptions from a text file (GUI-05).
+
+    Each line in the file is treated as one business description.
+    Blank lines and lines starting with # are ignored.
+    Generates all flows, then shows a batch summary table.
+    """
+    from text_to_sql_flow.batch import run_batch
+    run_batch(
+        file_path=file,
+        output_dir=output,
+        provider=provider,
+        config_path=config,
+        html=html,
+    )
