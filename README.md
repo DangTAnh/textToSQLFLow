@@ -11,8 +11,8 @@ pip install -e .
 # hoặc
 uv sync
 
-# Gen một flow (mặc định dùng OpenCode free, không cần API key)
-python -m text_to_sql_flow generate "Mô tả nghiệp vụ Spark SQL ETL" --output ./output
+# Gen một flow (mặc định dùng OpenCode - model free, cần OPENCODE_API_KEY)
+python -m text_to_sql_flow generate "Mô tả nghiệp vụ Spark SQL ETL" --output ./output --provider opencode
 
 # Interactive mode (khuyên dùng)
 python -m text_to_sql_flow interactive
@@ -30,18 +30,18 @@ python -m text_to_sql_flow batch descriptions.txt
 | **Auto evaluation** | 5-dim rubric, score ≥ 7.0, tuning loop (max 5 lần) |
 | **HTML report** | Jinja2 template, dark theme |
 | **Pydantic validation** | Schema validation cho flow JSON |
-| **Không cần key** | OpenCode free tier dùng ngay |
+| **OpenCode default** | Model free, cần OPENCODE\_API\_KEY |
 
 ## LLM Providers
 
 | Provider | Flag | Model mặc định | Cần key? |
 |----------|------|---------------|----------|
-| OpenCode (default) | `--provider opencode` | deepseek-v4-flash-free | Free |
-| OpenAI | `--provider openai` | GPT-4o | API key |
-| Claude | `--provider claude` | claude-sonnet-4-20250514 | API key |
-| DeepSeek | `--provider deepseek` | deepseek-chat | API key |
-| NVIDIA NIM | `--provider nvidia` | nemotron-4-340b-instruct | API key |
-| OpenRouter | `--provider openrouter` | openrouter/auto | API key |
+| OpenCode (default) | `--provider opencode` | deepseek-v4-flash-free | OPENCODE\_API\_KEY |
+| OpenAI | `--provider openai` | GPT-4o | OPENAI\_API\_KEY |
+| Claude | `--provider claude` | claude-sonnet-4-20250514 | ANTHROPIC\_API\_KEY |
+| DeepSeek | `--provider deepseek` | deepseek-chat | DEEPSEEK\_API\_KEY |
+| NVIDIA NIM | `--provider nvidia` | nemotron-4-340b-instruct | NVIDIA\_API\_KEY |
+| OpenRouter | `--provider openrouter` | openrouter/auto | OPENROUTER\_API\_KEY |
 
 ## Output
 
