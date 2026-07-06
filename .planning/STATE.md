@@ -36,8 +36,8 @@ See: `.planning/PROJECT.md` (updated 2026-07-06)
 
 | Phase | Status | Requirements |
 |-------|--------|--------------|
-| Phase 7: Table Metadata | Pending | TBL-01, TBL-02, TBL-03, TBL-04 |
-| Phase 8: DAG Optimizer | Pending | DAG-01, DAG-02, DAG-03, DAG-04, DAG-05 |
+| Phase 7: Table Metadata | ✅ Complete | TBL-01, TBL-02, TBL-03, TBL-04 |
+| Phase 8: DAG Optimizer | ✅ Complete | DAG-01, DAG-02, DAG-03, DAG-04, DAG-05 |
 | Phase 9: AI GATEWAY | Pending | GW-01 → GW-10 |
 | Phase 10: Integration & Polish | Pending | INT-01, INT-02, INT-03 |
 
@@ -66,10 +66,10 @@ See: `.planning/PROJECT.md` (updated 2026-07-06)
 
 | Aspect | Value |
 |--------|-------|
-| Phase | All v1.0-v1.1 complete. v1.2 Phase 7 starting |
+| Phase | All v1.0-v1.1 complete. Phases 7-8 ✅, Phase 9 starting |
 | Plan | — |
-| Status | Milestone v1.2 initialization complete |
-| Last activity | 2026-07-06 — v1.2 requirements + roadmap created |
+| Status | Phase 8 complete; Phase 9 planning |
+| Last activity | 2026-07-06 — Phase 8 complete, 121 tests pass |
 
 ## Reports
 

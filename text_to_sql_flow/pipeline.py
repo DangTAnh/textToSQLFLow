@@ -37,6 +37,7 @@ def run_generation(
     config: Optional[AppConfig] = None,
     tables_path: Optional[Path] = None,
     tables_include_ddl: bool = False,
+    optimize: bool = True,
 ) -> Path:
     """Execute the full generation pipeline.
 
@@ -49,6 +50,7 @@ def run_generation(
         config: Pre-built AppConfig override (takes precedence over config_path).
         tables_path: Optional path to table metadata file (JSON or DDL).
         tables_include_ddl: If True, inject full DDL text instead of summary.
+        optimize: If True (default), run DAG optimizer to maximise parallelism.
 
     Returns:
         Path to the generated JSON file.
@@ -114,7 +116,24 @@ def run_generation(
                 )
             continue
 
-        # Step 3: Write output
+        # Step 3: DAG Optimizer
+        if optimize:
+            from text_to_sql_flow.dag_optimizer.engine import (
+                apply_optimization,
+                suggest_intermediate_steps,
+            )
+            optimized = apply_optimization(flow)
+            suggestions = suggest_intermediate_steps(flow)
+            if suggestions:
+                for s in suggestions:
+                    logger.info("Optimization suggestion: %s", s.detail)
+            original_orders = {s.name: s.order for s in flow.steps}
+            if any(s.order != original_orders.get(s.name)
+                   for s in optimized.steps):
+                logger.info("DAG optimizer adjusted step orders for parallelism")
+                flow = optimized
+
+        # Step 4: Write output
         output_path = write_flow_json(flow, output_dir)
         logger.info("Flow generated successfully: %s", output_path)
 
@@ -149,6 +168,7 @@ def run_evaluation_loop(
     threshold: float = THRESHOLD,
     tables_path: Optional[Path] = None,
     tables_include_ddl: bool = False,
+    optimize: bool = True,
 ) -> Path:
     """Run generate-evaluate-tune loop.
 
@@ -194,6 +214,7 @@ def run_evaluation_loop(
             config=config,
             tables_path=tables_path,
             tables_include_ddl=tables_include_ddl,
+            optimize=optimize,
         )
 
         # Step 2: Evaluate
