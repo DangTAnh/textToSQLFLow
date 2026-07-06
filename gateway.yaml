@@ -1,0 +1,49 @@
+# AI GATEWAY Configuration
+# Copy to gateway.yaml and edit for your setup.
+
+host: "0.0.0.0"
+port: 8000
+
+# Routing rules: regex pattern -> provider/model
+# First match wins, checked against the user message content.
+routing:
+  - pattern: "invoice|customer|sales"
+    provider: "openai"
+    model: "gpt-4o"
+  - pattern: "log|debug|test"
+    provider: "opencode"
+    model: "deepseek-v4-flash-free"
+
+# Provider credentials
+providers:
+  openai:
+    api_key: "${OPENAI_API_KEY}"
+    base_url: "https://api.openai.com/v1"
+  opencode:
+    api_key: "${OPENCODE_API_KEY}"
+    base_url: "https://opencode.ai/zen/v1"
+
+# Fallback: if primary fails, try secondary providers in order
+fallback:
+  openai:
+    primary: "openai"
+    secondary:
+      - "opencode"
+
+# Rate limiting (per-provider RPM)
+rate_limit:
+  enabled: true
+  default_rpm: 60
+  overrides:
+    openai: 30
+    opencode: 120
+
+# Response caching (TTL in seconds)
+cache_ttl: 300
+
+# Audit log path (relative to gateway.yaml, empty = disabled)
+audit_log_path: "gateway_audit.log"
+
+# RBAC: API key -> list of allowed providers
+# Empty dict = no auth required
+rbac: {}

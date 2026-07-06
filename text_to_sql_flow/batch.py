@@ -44,6 +44,7 @@ def run_batch(
     tables_path: Optional[Path] = None,
     tables_include_ddl: bool = False,
     optimize: bool = True,
+    gateway_url: Optional[str] = None,
 ) -> list[BatchItem]:
     """Run batch generation from a text file.
 
@@ -98,6 +99,7 @@ def run_batch(
                     tables_path=tables_path,
                     tables_include_ddl=tables_include_ddl,
                     optimize=optimize,
+                    gateway_url=gateway_url,
                 )
                 results.append(BatchItem(
                     index=i,

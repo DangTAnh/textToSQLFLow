@@ -14,6 +14,7 @@ import logging
 import time
 from typing import Optional
 
+import httpx
 import litellm
 
 from text_to_sql_flow.config import AppConfig, resolve_api_key
@@ -34,11 +35,68 @@ PROVIDER_MODEL_MAP: dict[str, str] = {
 MAX_RETRIES = 3
 
 
+# ── Gateway support (Phase 9) ─────────────────────────────────────────
+
+
+def call_llm_via_gateway(
+    gateway_url: str,
+    system_prompt: str,
+    user_prompt: str,
+    provider: str = "opencode",
+    config: Optional[AppConfig] = None,
+) -> str:
+    """Call the AI GATEWAY instead of LLM directly.
+
+    Args:
+        gateway_url: Base URL of the gateway (e.g. ``http://localhost:8000``).
+        system_prompt: System-level instruction for the model.
+        user_prompt: User message / task description.
+        provider: Provider hint (used to choose route on gateway).
+        config: Optional AppConfig for temperature/max_tokens overrides.
+
+    Returns:
+        The response text content.
+    """
+    url = f"{gateway_url.rstrip('/')}/v1/chat/completions"
+    body = {
+        "model": provider,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        "temperature": config.temperature if config else 0.3,
+    }
+    if config and config.max_tokens:
+        body["max_tokens"] = config.max_tokens
+
+    last_error: Optional[Exception] = None
+    for attempt in range(MAX_RETRIES):
+        try:
+            resp = httpx.post(url, json=body, timeout=120.0)
+            resp.raise_for_status()
+            data = resp.json()
+            return data["choices"][0]["message"]["content"]
+        except Exception as e:
+            last_error = e
+            if attempt < MAX_RETRIES - 1:
+                wait = (2**attempt) + (time.time() % 1)
+                logger.warning(
+                    "Gateway call failed (attempt %d/%d): %s. Retrying in %.1fs",
+                    attempt + 1, MAX_RETRIES, e, wait,
+                )
+                time.sleep(wait)
+
+    raise RuntimeError(
+        f"Gateway call failed after {MAX_RETRIES} retries: {last_error}"
+    )
+
+
 def call_llm(
     system_prompt: str,
     user_prompt: str,
     provider: str = "opencode",
     config: Optional[AppConfig] = None,
+    gateway_url: Optional[str] = None,
 ) -> str:
     """Call an LLM via litellm with retry and exponential backoff.
 
@@ -54,6 +112,13 @@ def call_llm(
     Raises:
         RuntimeError: If all retries are exhausted.
     """
+    # Gateway mode: bypass litellm, route through gateway
+    if gateway_url:
+        return call_llm_via_gateway(
+            gateway_url, system_prompt, user_prompt,
+            provider=provider, config=config,
+        )
+
     model = PROVIDER_MODEL_MAP.get(provider)
     if not model:
         raise ValueError(

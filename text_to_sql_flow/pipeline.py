@@ -38,6 +38,7 @@ def run_generation(
     tables_path: Optional[Path] = None,
     tables_include_ddl: bool = False,
     optimize: bool = True,
+    gateway_url: Optional[str] = None,
 ) -> Path:
     """Execute the full generation pipeline.
 
@@ -51,6 +52,7 @@ def run_generation(
         tables_path: Optional path to table metadata file (JSON or DDL).
         tables_include_ddl: If True, inject full DDL text instead of summary.
         optimize: If True (default), run DAG optimizer to maximise parallelism.
+        gateway_url: If set, route all LLM calls through the AI GATEWAY.
 
     Returns:
         Path to the generated JSON file.
@@ -85,6 +87,7 @@ def run_generation(
                 system_prompt, user_prompt,
                 provider=active_provider,
                 config=config,
+                gateway_url=gateway_url,
             )
         except Exception as e:
             last_error = str(e)
@@ -169,6 +172,7 @@ def run_evaluation_loop(
     tables_path: Optional[Path] = None,
     tables_include_ddl: bool = False,
     optimize: bool = True,
+    gateway_url: Optional[str] = None,
 ) -> Path:
     """Run generate-evaluate-tune loop.
 
@@ -215,6 +219,7 @@ def run_evaluation_loop(
             tables_path=tables_path,
             tables_include_ddl=tables_include_ddl,
             optimize=optimize,
+            gateway_url=gateway_url,
         )
 
         # Step 2: Evaluate
