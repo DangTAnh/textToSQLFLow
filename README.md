@@ -2,7 +2,7 @@
 
 CLI tool sinh luồng Spark SQL dạng JSON từ mô tả nghiệp vụ bằng LLM.
 
-Data engineer đưa mô tả nghiệp vụ → nhận luồng SQL Spark sẵn sàng chạy.
+Data engineer đưa mô tả nghiệp vụ + thông tin bảng → nhận luồng SQL Spark tối ưu song song, sẵn sàng chạy.
 
 ## Quick Start
 
@@ -28,6 +28,9 @@ python -m text_to_sql_flow batch descriptions.txt
 | **3 CLI modes** | `generate`, `interactive` (REPL), `batch` (file) |
 | **6 LLM providers** | OpenAI, Claude, DeepSeek, NVIDIA NIM, OpenRouter, OpenCode |
 | **Auto evaluation** | 5-dim rubric, score ≥ 7.0 (default), tuning loop (max 5 lần) |
+| **Table Metadata** | Cung cấp schema JSON hoặc DDL → LLM sinh flow chính xác hơn |
+| **DAG Optimizer** | Tự động tối ưu thứ tự chạy cho parallel execution tối đa |
+| **AI GATEWAY** | Standalone proxy service: routing, fallback, rate limit, cache, audit, RBAC |
 | **HTML report** | Jinja2 template, dark theme |
 | **Pydantic validation** | Schema validation cho flow JSON |
 | **OpenCode default** | Model free, cần OPENCODE\_API\_KEY |
@@ -43,6 +46,42 @@ python -m text_to_sql_flow batch descriptions.txt
 | NVIDIA NIM | `--provider nvidia` | nemotron-4-340b-instruct | NVIDIA\_API\_KEY |
 | OpenRouter | `--provider openrouter` | openrouter/auto | OPENROUTER\_API\_KEY |
 
+## Usage nâng cao
+
+### Table Metadata (v1.2)
+
+```bash
+# JSON format
+python -m text_to_sql_flow generate "Mô tả" --tables schema.json
+
+# DDL format (auto-detect)
+python -m text_to_sql_flow generate "Mô tả" --tables schema.ddl --tables-include-ddl
+```
+
+### DAG Optimizer (v1.2)
+
+```bash
+# Optimizer tự động bật (mặc định)
+python -m text_to_sql_flow generate "Mô tả" --optimize
+
+# Tắt optimizer (passthrough raw LLM output)
+python -m text_to_sql_flow generate "Mô tả" --no-optimize
+```
+
+### AI GATEWAY (v1.2)
+
+```bash
+# 1. Start gateway
+python -m gateway.main
+
+# 2. Trong terminal khác, dùng CLI với gateway
+python -m text_to_sql_flow generate "Mô tả" --gateway-url http://localhost:8000
+
+# Hoặc dùng Docker Compose
+docker compose up gateway -d
+python -m text_to_sql_flow generate "Mô tả" --gateway-url http://localhost:8000
+```
+
 ## Output
 
 ```
@@ -52,36 +91,83 @@ python -m text_to_sql_flow batch descriptions.txt
 └── report.html       # HTML report (nếu --html)
 ```
 
+## AI GATEWAY
+
+Standalone FastAPI service, OpenAI-compatible endpoint, config qua `gateway.yaml`.
+
+### Endpoints
+
+| Endpoint | Method | Mô tả |
+|----------|--------|-------|
+| `/health` | GET | Health check |
+| `/v1/models` | GET | Danh sách model (từ routing rules) |
+| `/v1/chat/completions` | POST | Proxy LLM call (OpenAI-compatible) |
+
+### Tính năng Gateway
+
+| Tính năng | Config | Mô tả |
+|-----------|--------|-------|
+| Routing | `routing` | Regex pattern → provider/model |
+| Fallback | `fallback` | Tự động chuyển provider khi fail |
+| Rate limit | `rate_limit` | Token bucket, configurable RPM |
+| Caching | `cache_ttl` | In-memory, TTL configurable |
+| Audit log | `audit_log_path` | Ghi metadata request (không payload) |
+| RBAC | `rbac` | API key → allowed providers |
+
+### Docker
+
+```bash
+# Gateway service
+docker compose up gateway -d
+
+# CLI one-shot command
+docker compose run cli --help
+```
+
 ## Cấu trúc source
 
 ```
-text_to_sql_flow/
-├── __main__.py      # Entry point
-├── cli.py           # Typer CLI (3 commands)
-├── pipeline.py      # Pipeline controller
-├── evaluator.py     # 5-dim quality evaluation
-├── config.py        # .env + YAML config
-├── types.py         # Pydantic models
-├── interactive.py   # REPL mode
-├── batch.py         # Batch mode
+text_to_sql_flow/          # CLI tool
+├── cli.py                # Typer CLI (3 commands)
+├── pipeline.py           # Pipeline controller
+├── evaluator.py          # 5-dim quality evaluation
+├── config.py             # .env + YAML config
+├── types.py              # Pydantic models
+├── interactive.py        # REPL mode
+├── batch.py              # Batch mode
+├── dag_optimizer/        # DAG optimization (v1.2)
+│   ├── engine.py
+│   └── review.py
+├── table_metadata/        # Table metadata parsing (v1.2)
+│   ├── models.py
+│   ├── parser.py
+│   └── ddl_parser.py
 ├── llm/
-│   ├── provider.py  # litellm multi-provider
-│   └── prompts.py   # System/user prompts
+│   ├── provider.py       # litellm multi-provider + gateway support
+│   └── prompts.py        # System/user prompts
 ├── parsers/
 │   └── flow_parser.py
 └── output/
     ├── json_writer.py
     └── html_renderer.py
+
+gateway/                   # AI GATEWAY service (v1.2)
+├── main.py               # FastAPI app
+├── config.py             # gateway.yaml loader
+├── models.py             # Request/response models
+├── llm.py                # Routing, fallback, cost tracking
+├── cache.py              # Response cache
+└── rate_limiter.py       # Token bucket rate limiter
 ```
 
 ## Tests
 
 ```bash
-pytest tests/ -v    # 82 tests
+pytest tests/ -v    # 141+ tests
 ```
 
 ## Tech stack
 
-Python 3.11+, Typer, Pydantic, litellm, Jinja2, Rich
+Python 3.11+, Typer, Pydantic, litellm, Jinja2, Rich, FastAPI, uvicorn
 
-*Không dùng LangChain, không Web framework*
+*Không dùng LangChain*

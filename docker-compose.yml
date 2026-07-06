@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - GATEWAY_CONFIG=/app/gateway.yaml
+    volumes:
+      - ./gateway.yaml:/app/gateway.yaml:ro
+      - ./gateway_audit.log:/app/gateway_audit.log
+    restart: unless-stopped
+
+  # CLI dev helper — runs a one-shot command against the gateway
+  # Usage: docker compose run cli --help
+  cli:
+    build:
+      context: .
+      dockerfile: Dockerfile.cli
+    environment:
+      - GATEWAY_CONFIG=/app/gateway.yaml
+    volumes:
+      - ./gateway.yaml:/app/gateway.yaml:ro
+      - ./output:/app/output
+    entrypoint: ["text-to-sql-flow"]
+    profiles:
+      - cli
