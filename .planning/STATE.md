@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
+milestone: v1.2
 milestone_name: milestone
-status: completed
-last_updated: "2026-07-02T02:30:07.297Z"
+status: in_progress
+last_updated: "2026-07-06T22:30:00.000Z"
 progress:
-  total_phases: 3
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -16,35 +16,36 @@ progress:
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-07-01)
+See: `.planning/PROJECT.md` (updated 2026-07-06)
 
-**Core value:** Data engineer có thể đưa mô tả nghiệp vụ và nhận luồng SQL Spark sẵn sàng chạy.
-**Current focus:** Milestone v1.1 — CLI GUI & UX Improvements.
+**Core value:** Data engineer có thể đưa mô tả nghiệp vụ + thông tin bảng và nhận luồng SQL Spark tối ưu song song, sẵn sàng chạy.
+**Current focus:** Milestone v1.2 — Table Metadata, DAG Optimization & AI Gateway.
 
 ## Status
 
 | Aspect | Status |
 |--------|--------|
 | Initialization | ✅ Complete |
-| Research | ✅ Complete |
-| Requirements | ✅ Defined (9 v1.1 requirements) |
-| Roadmap | ✅ Created (3 phases: 4-6) |
-| Current Phase | Phase 4 — Not started |
+| Requirements | ✅ Defined (22 v1.2 requirements) |
+| Roadmap | ✅ Created (4 phases: 7-10) |
+| Current Phase | Phase 7 — Not started |
 
 ## Milestones
 
 | Milestone | Status | Phases | Requirements |
 |-----------|--------|--------|--------------|
 | v1.0 | ✅ Complete | 3 (Phases 1-3) | 19 |
-| v1.1 | 🔄 In Progress | 3 (Phases 4-6) | 9 |
+| v1.1 | ✅ Complete | 3 (Phases 4-6) | 9 |
+| v1.2 | 🔄 In Progress | 4 (Phases 7-10) | 22 |
 
-## Phase Summary (v1.1)
+## Phase Summary (v1.2)
 
 | Phase | Status | Requirements |
 |-------|--------|--------------|
-| Phase 4: Config Foundation | ✅ Complete | CFG-01, CFG-02 |
-| Phase 5: Interactive Mode | ✅ Complete | GUI-01, GUI-02, GUI-03, GUI-04 |
-| Phase 6: Batch & Results | ✅ Complete | GUI-05, GUI-06, GUI-07 |
+| Phase 7: Table Metadata | Pending | TBL-01, TBL-02, TBL-03, TBL-04 |
+| Phase 8: DAG Optimizer | Pending | DAG-01, DAG-02, DAG-03, DAG-04, DAG-05 |
+| Phase 9: AI GATEWAY | Pending | GW-01 → GW-10 |
+| Phase 10: Integration & Polish | Pending | INT-01, INT-02, INT-03 |
 
 ## Active Decisions
 
@@ -60,31 +61,46 @@ See: `.planning/PROJECT.md` (updated 2026-07-01)
 | Rich-based CLI GUI (không web framework) | ✅ Decided |
 | .env file for API key management | ✅ Decided |
 | opencode/deepseek-v4-flash-free as default provider | ✅ Decided |
+| v1.2: Monorepo (CLI + Gateway cùng repo) | ✅ Decided |
+| v1.2: Table metadata format: JSON + DDL | ✅ Decided |
+| v1.2: DAG Optimizer hybrid (LLM → Optimizer → user review) | ✅ Decided |
+| v1.2: AI GATEWAY standalone FastAPI service, full proxy | ✅ Decided |
+| v1.2: AI GATEWAY traffic flow: Tool → Gateway → LLM | ✅ Decided |
+| v1.2: AI GATEWAY tech stack: Python FastAPI | ✅ Decided |
 
 ## Current Position
 
 | Aspect | Value |
 |--------|-------|
-| Phase | All complete |
+| Phase | All v1.0-v1.1 complete. v1.2 Phase 7 starting |
 | Plan | — |
-| Status | Milestone v1.1 complete |
-| Last activity | 2026-07-02 — Milestone v1.1 all 3 phases implemented |
+| Status | Milestone v1.2 initialization complete |
+| Last activity | 2026-07-06 — v1.2 requirements + roadmap created |
+
+## Reports
+
+| Report | Path | Description |
+|--------|------|-------------|
+| Milestone Summary v1.1 | `.planning/reports/MILESTONE_SUMMARY-v1.1.md` | Full milestone summary (7 sections, 28 requirements mapped) |
 
 ## Accumulated Context
 
-### Key Decisions (v1.1)
+### Key Decisions (v1.2)
 
-- **.env > env var > config YAML**: Priority chain for API key resolution. Phase 4 implements the .env loader.
-- **Default provider**: Switch to `opencode/deepseek-v4-flash-free` (free tier, no key needed for basic usage).
-- **Rich-based TUI**: Interactive mode uses `rich` for tables, prompts, and formatted output — no web framework.
-- **No session persistence**: v1.1 keeps session history in memory (no file-based persistence until proven needed).
+- **Table metadata**: Support JSON schema files and DDL scripts. Auto-detect format.
+- **DAG Optimizer**: Hybrid approach — LLM generates initial DAG → Optimizer module fine-tunes order → user reviews in interactive mode.
+- **AI GATEWAY**: Standalone Python FastAPI service. Full proxy layer with routing, fallback, cost tracking, rate limiting, caching, audit logging, RBAC.
+- **Traffic flow**: CLI tool → HTTP → GATEWAY → LLM provider. No direct LLM calls when gateway is configured.
+- **Monorepo**: CLI + Gateway cùng repo, shared Pydantic types.
+- **SQLWF**: Deferred until spec is available from team.
 
 ### Phasing Rationale
 
-1. **Phase 4 first** — .env loading and default provider are prerequisites for the interactive experience.
-2. **Phase 5 second** — Core interactive workflow (input, provider selection, API key form, REPL loop). This is the main UX improvement.
-3. **Phase 6 last** — Batch mode, result summary, and re-generate build on top of interactive session flow.
+1. **Phase 7 first** — Table metadata parsing là nền tảng cho flow generation chính xác hơn.
+2. **Phase 8 second** — DAG optimizer build trên flow đã có metadata (đầu vào chất lượng hơn).
+3. **Phase 9 parallel** — AI GATEWAY độc lập, có thể xây dựng song song với Phase 7-8.
+4. **Phase 10 last** — Integration test + polish sau khi tất cả component hoàn tất.
 
 ---
 
-*State updated: 2026-07-01*
+*State updated: 2026-07-06*

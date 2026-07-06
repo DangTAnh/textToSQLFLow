@@ -1,55 +1,86 @@
-# Requirements: TextToSQLFlow — Milestone v1.1
+# Requirements: TextToSQLFlow — Milestone v1.2
 
-**Defined:** 2026-07-01
-**Core Value:** Data engineer có thể đưa mô tả nghiệp vụ và nhận luồng SQL Spark sẵn sàng chạy.
+**Defined:** 2026-07-06
+**Core Value:** Data engineer có thể đưa mô tả nghiệp vụ + thông tin bảng và nhận luồng SQL Spark tối ưu song song, sẵn sàng chạy.
 
-## v1.1 Requirements
+## v1.2 Requirements
 
-### Interactive GUI (GUI)
+### Table Metadata (TBL)
 
-- [ ] **GUI-01**: CLI interactive mode (rich-based) cho phép nhập nhiều mô tả nghiệp vụ trong 1 session
-- [ ] **GUI-02**: Giao diện chọn provider từ danh sách (dùng rich.table / prompt), không cần nhớ --provider flag
-- [ ] **GUI-03**: Form nhập API key inline nếu provider chưa có key (.env, env var, config file đều không có)
-- [ ] **GUI-04**: REPL loop — sau mỗi lần gen, hỏi user có muốn nhập tiếp hay thoát
-- [ ] **GUI-05**: Batch mode — đọc danh sách mô tả từ file text, gen batch tất cả
-- [ ] **GUI-06**: Result summary — hiển thị bảng tổng hợp tất cả flow đã gen trong session
-- [ ] **GUI-07**: Re-generate — chọn 1 flow cũ để gen lại với provider/config khác
+- [ ] **TBL-01**: CLI flag `--tables` / `-t` nhận path đến file JSON chứa table metadata (tên bảng, cột, kiểu, mô tả, khóa, partitions)
+- [ ] **TBL-02**: CLI flag `--tables` cũng support file DDL (CREATE TABLE statements), tự detect JSON hay DDL dựa trên extension / nội dung
+- [ ] **TBL-03**: Module `table_metadata/` parse metadata thành Pydantic model (TableMetadata, ColumnMetadata)
+- [ ] **TBL-04**: Prompt builder kết hợp business description + table metadata để LLM sinh flow chính xác hơn (biết table nào có column gì, join key nào)
 
-### Configuration (CFG)
+### DAG Optimizer (DAG)
 
-- [ ] **CFG-01**: Load API key từ `.env` file, priority: `.env` > environment variable > config YAML
-- [ ] **CFG-02**: Đổi default provider thành `opencode/deepseek-v4-flash-free`
+- [ ] **DAG-01**: Module `dag_optimizer/` phân tích flow DAG, detect các steps có thể chạy song song dựa trên dependency graph
+- [ ] **DAG-02**: Optimizer tự động điều chỉnh `steps.order` để tối đa parallel execution
+- [ ] **DAG-03**: Optimizer có thể đề xuất thêm intermediate steps để tận dụng parallelism
+- [ ] **DAG-04**: CLI flag `--optimize` / `--no-optimize` (mặc định bật)
+- [ ] **DAG-05**: User có thể review optimization result trước khi accept (interactive mode + batch có flag `--auto`)
+
+### AI GATEWAY (GW)
+
+- [ ] **GW-01**: Standalone FastAPI service với endpoint `/v1/chat/completions` (openai-compatible)
+- [ ] **GW-02**: Routing rules: config map `description_pattern → provider/model`, match bằng regex
+- [ ] **GW-03**: Provider fallback: nếu primary provider fail, tự động chuyển sang secondary
+- [ ] **GW-04**: Cost tracking: log số tokens, cost estimate per request, per provider
+- [ ] **GW-05**: Rate limiting: configurable requests-per-minute per provider
+- [ ] **GW-06**: Response caching: cache identical prompts, TTL configurable
+- [ ] **GW-07**: Audit logging: log request/response metadata (không log payload) cho compliance
+- [ ] **GW-08**: RBAC: API key mapping → allowed providers, rate limit profile
+- [ ] **GW-09**: Gateway config: YAML file (`gateway.yaml`) với sections: routing, fallback, rate_limit, cache, audit, rbac
+- [ ] **GW-10**: CLI tool integration: `--gateway-url` flag trỏ đến gateway, tool gọi gateway thay vì LLM trực tiếp
+
+### Integration & Polish (INT)
+
+- [ ] **INT-01**: Integration tests: CLI + Optimizer + Gateway end-to-end
+- [ ] **INT-02**: Docker Compose cho dev (CLI dev + Gateway service)
+- [ ] **INT-03**: Documentation: README update với v1.2 features, Gateway setup guide
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Chạy SQL trên Spark | POC chỉ sinh luồng, không execute |
-| Web UI / Dashboard | CLI-first, HTML report là đủ |
-| LangChain / LangGraph | Overhead cho use case này |
-| Real-time streaming | Batch ETL thuần |
-| Database khác ngoài Spark SQL | Scope hẹp, Spark SQL focus |
-| CI/CD pipeline | POC chưa cần |
-| Lưu session history vào file | Đủ dùng trong memory cho POC |
+| SQLWF integration | Deferred — chờ spec từ team |
+| Web UI cho Gateway | CLI + API-first, web UI deploy riêng nếu cần |
+| Multi-node Gateway cluster | POC scope, single instance đủ |
+| Streaming response | Thêm complexity, batch ETL gen không cần real-time |
+| Prompt template customization | v1.1 không có, v1.2 cũng chưa cần |
+| Async batch processing | Sync batch đủ cho POC |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GUI-01 | Phase 5 | Pending |
-| GUI-02 | Phase 5 | Pending |
-| GUI-03 | Phase 5 | Pending |
-| GUI-04 | Phase 5 | Pending |
-| GUI-05 | Phase 6 | Pending |
-| GUI-06 | Phase 6 | Pending |
-| GUI-07 | Phase 6 | Pending |
-| CFG-01 | Phase 4 | Pending |
-| CFG-02 | Phase 4 | Pending |
+| TBL-01 | Phase 7 | Pending |
+| TBL-02 | Phase 7 | Pending |
+| TBL-03 | Phase 7 | Pending |
+| TBL-04 | Phase 7 | Pending |
+| DAG-01 | Phase 8 | Pending |
+| DAG-02 | Phase 8 | Pending |
+| DAG-03 | Phase 8 | Pending |
+| DAG-04 | Phase 8 | Pending |
+| DAG-05 | Phase 8 | Pending |
+| GW-01 | Phase 9 | Pending |
+| GW-02 | Phase 9 | Pending |
+| GW-03 | Phase 9 | Pending |
+| GW-04 | Phase 9 | Pending |
+| GW-05 | Phase 9 | Pending |
+| GW-06 | Phase 9 | Pending |
+| GW-07 | Phase 9 | Pending |
+| GW-08 | Phase 9 | Pending |
+| GW-09 | Phase 9 | Pending |
+| GW-10 | Phase 9 | Pending |
+| INT-01 | Phase 10 | Pending |
+| INT-02 | Phase 10 | Pending |
+| INT-03 | Phase 10 | Pending |
 
 **Coverage:**
-- v1.1 requirements: 9 total
-- Mapped to phases: 9
+- v1.2 requirements: 22 total
+- Mapped to phases: 22
 - Unmapped: 0 ✓
 
 ---
-*Last updated: 2026-07-01 after roadmap creation*
+*Last updated: 2026-07-06 during v1.2 initialization*

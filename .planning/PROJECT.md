@@ -8,15 +8,15 @@ CLI tool sinh luồng Spark SQL dạng JSON từ mô tả nghiệp vụ bằng L
 
 Data engineer có thể đưa mô tả nghiệp vụ và nhận luồng SQL Spark sẵn sàng chạy, không cần tự viết từng câu SQL.
 
-## Current Milestone: v1.1 CLI GUI & UX Improvements
+## Current Milestone: v1.2 — Table Metadata, DAG Optimization & AI Gateway
 
-**Goal:** Cải thiện trải nghiệm CLI với giao diện tương tác, hỗ trợ nhập nhiều mô tả, provider mặc định tối ưu, và .env config.
+**Goal:** Kết hợp mô tả nghiệp vụ + thông tin mô tả các bảng để sinh luồng SQL chính xác hơn, tối ưu song song, tích hợp AI GATEWAY tập trung.
 
 **Target features:**
-- CLI GUI (rich-based interactive interface) để nhập nhiều mô tả nghiệp vụ
-- Đổi default provider thành `opencode/deepseek-v4-flash-free`
-- Hỗ trợ `.env` file để load API key
-- Provider switching UI + GUI nhập API key khi chưa có
+- Input mở rộng: nhận table metadata (JSON schema + DDL) kết hợp với business description
+- DAG Optimizer: phân tích dependency graph, tối đa parallel execution nodes
+- AI GATEWAY: standalone FastAPI service — routing, fallback, cost tracking, rate limit, caching, audit, RBAC
+- Tool gọi Gateway thay vì LLM trực tiếp
 
 ## Requirements
 
