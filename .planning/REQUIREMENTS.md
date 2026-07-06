@@ -35,9 +35,9 @@
 
 ### Integration & Polish (INT)
 
-- [ ] **INT-01**: Integration tests: CLI + Optimizer + Gateway end-to-end
-- [ ] **INT-02**: Docker Compose cho dev (CLI dev + Gateway service)
-- [ ] **INT-03**: Documentation: README update với v1.2 features, Gateway setup guide
+- [x] **INT-01**: Integration tests: CLI + Optimizer + Gateway end-to-end
+- [x] **INT-02**: Docker Compose cho dev (CLI dev + Gateway service)
+- [x] **INT-03**: Documentation: README update với v1.2 features, Gateway setup guide
 
 ## Out of Scope
 
@@ -73,9 +73,9 @@
 | GW-08 | Phase 9 | ✅ Complete |
 | GW-09 | Phase 9 | ✅ Complete |
 | GW-10 | Phase 9 | ✅ Complete |
-| INT-01 | Phase 10 | Pending |
-| INT-02 | Phase 10 | Pending |
-| INT-03 | Phase 10 | Pending |
+| INT-01 | Phase 10 | ✅ Complete |
+| INT-02 | Phase 10 | ✅ Complete |
+| INT-03 | Phase 10 | ✅ Complete |
 
 **Coverage:**
 - v1.2 requirements: 22 total

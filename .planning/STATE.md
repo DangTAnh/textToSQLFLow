@@ -2,7 +2,7 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: milestone
-status: in_progress
+status: complete
 last_updated: "2026-07-06T09:48:45.721Z"
 ---
 
@@ -30,7 +30,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-06)
 |-----------|--------|--------|--------------|
 | v1.0 | ✅ Complete | 3 (Phases 1-3) | 19 |
 | v1.1 | ✅ Complete | 3 (Phases 4-6) | 9 |
-| v1.2 | 🔄 In Progress | 4 (Phases 7-10) | 22 |
+| v1.2 | ✅ Complete | 4 (Phases 7-10) | 22 |
 
 ## Phase Summary (v1.2)
 
@@ -39,7 +39,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-06)
 | Phase 7: Table Metadata | ✅ Complete | TBL-01, TBL-02, TBL-03, TBL-04 |
 | Phase 8: DAG Optimizer | ✅ Complete | DAG-01, DAG-02, DAG-03, DAG-04, DAG-05 |
 | Phase 9: AI GATEWAY | ✅ Complete | GW-01 → GW-10 |
-| Phase 10: Integration & Polish | Pending | INT-01, INT-02, INT-03 |
+| Phase 10: Integration & Polish | ✅ Complete | INT-01, INT-02, INT-03 |
 
 ## Active Decisions
 
@@ -66,10 +66,10 @@ See: `.planning/PROJECT.md` (updated 2026-07-06)
 
 | Aspect | Value |
 |--------|-------|
-| Phase | All v1.0-v1.1 complete. Phases 7-9 ✅, Phase 10 starting |
+| Phase | Milestone v1.2 complete (Phases 7-10) |
 | Plan | — |
-| Status | Phase 9 complete; Phase 10 planning |
-| Last activity | 2026-07-06 — Phase 9 complete, 141 tests pass |
+| Status | ✅ Milestone complete. 145 tests pass. SQLWF deferred. |
+| Last activity | 2026-07-06 — v1.2 complete |
 
 ## Reports
 
