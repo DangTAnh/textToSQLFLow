@@ -80,6 +80,11 @@ def generate(
         "--tables-include-ddl",
         help="Include full DDL text in prompt instead of summary",
     ),
+    optimize: bool = typer.Option(
+        True,
+        "--optimize/--no-optimize",
+        help="Enable/disable DAG optimizer for parallel execution (default: enabled)",
+    ),
 ):
     """Generate a Spark SQL flow from a business description.
 
@@ -87,6 +92,7 @@ def generate(
     Use --auto to enable the evaluate-tune loop (auto-retry until quality threshold met).
     Use --interactive to review each evaluation result and choose retry/abort/continue.
     Use --tables to provide table schema metadata (JSON or DDL) for more accurate generation.
+    Use --no-optimize to skip DAG optimizer (passthrough raw LLM output).
     """
     from text_to_sql_flow.pipeline import run_generation, run_evaluation_loop
 
@@ -100,6 +106,7 @@ def generate(
         html=html,
         tables_path=tables,
         tables_include_ddl=tables_include_ddl,
+        optimize=optimize,
     )
 
     if auto or interactive:
@@ -177,6 +184,11 @@ def batch(
         "--tables-include-ddl",
         help="Include full DDL text in prompt instead of summary",
     ),
+    optimize: bool = typer.Option(
+        True,
+        "--optimize/--no-optimize",
+        help="Enable/disable DAG optimizer for parallel execution (default: enabled)",
+    ),
 ):
     """Process multiple descriptions from a text file (GUI-05).
 
@@ -193,4 +205,5 @@ def batch(
         html=html,
         tables_path=tables,
         tables_include_ddl=tables_include_ddl,
+        optimize=optimize,
     )

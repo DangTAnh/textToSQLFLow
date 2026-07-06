@@ -7,18 +7,18 @@
 
 ### Table Metadata (TBL)
 
-- [ ] **TBL-01**: CLI flag `--tables` / `-t` nhận path đến file JSON chứa table metadata (tên bảng, cột, kiểu, mô tả, khóa, partitions)
-- [ ] **TBL-02**: CLI flag `--tables` cũng support file DDL (CREATE TABLE statements), tự detect JSON hay DDL dựa trên extension / nội dung
-- [ ] **TBL-03**: Module `table_metadata/` parse metadata thành Pydantic model (TableMetadata, ColumnMetadata)
-- [ ] **TBL-04**: Prompt builder kết hợp business description + table metadata để LLM sinh flow chính xác hơn (biết table nào có column gì, join key nào)
+- [x] **TBL-01**: CLI flag `--tables` / `-t` nhận path đến file JSON chứa table metadata (tên bảng, cột, kiểu, mô tả, khóa, partitions)
+- [x] **TBL-02**: CLI flag `--tables` cũng support file DDL (CREATE TABLE statements), tự detect JSON hay DDL dựa trên extension / nội dung
+- [x] **TBL-03**: Module `table_metadata/` parse metadata thành Pydantic model (TableMetadata, ColumnMetadata)
+- [x] **TBL-04**: Prompt builder kết hợp business description + table metadata để LLM sinh flow chính xác hơn (biết table nào có column gì, join key nào)
 
 ### DAG Optimizer (DAG)
 
-- [ ] **DAG-01**: Module `dag_optimizer/` phân tích flow DAG, detect các steps có thể chạy song song dựa trên dependency graph
-- [ ] **DAG-02**: Optimizer tự động điều chỉnh `steps.order` để tối đa parallel execution
-- [ ] **DAG-03**: Optimizer có thể đề xuất thêm intermediate steps để tận dụng parallelism
-- [ ] **DAG-04**: CLI flag `--optimize` / `--no-optimize` (mặc định bật)
-- [ ] **DAG-05**: User có thể review optimization result trước khi accept (interactive mode + batch có flag `--auto`)
+- [x] **DAG-01**: Module `dag_optimizer/` phân tích flow DAG, detect các steps có thể chạy song song dựa trên dependency graph
+- [x] **DAG-02**: Optimizer tự động điều chỉnh `steps.order` để tối đa parallel execution
+- [x] **DAG-03**: Optimizer có thể đề xuất thêm intermediate steps để tận dụng parallelism
+- [x] **DAG-04**: CLI flag `--optimize` / `--no-optimize` (mặc định bật)
+- [x] **DAG-05**: User có thể review optimization result trước khi accept (interactive mode + batch có flag `--auto`)
 
 ### AI GATEWAY (GW)
 
@@ -54,15 +54,15 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TBL-01 | Phase 7 | Pending |
-| TBL-02 | Phase 7 | Pending |
-| TBL-03 | Phase 7 | Pending |
-| TBL-04 | Phase 7 | Pending |
-| DAG-01 | Phase 8 | Pending |
-| DAG-02 | Phase 8 | Pending |
-| DAG-03 | Phase 8 | Pending |
-| DAG-04 | Phase 8 | Pending |
-| DAG-05 | Phase 8 | Pending |
+| TBL-01 | Phase 7 | ✅ Complete |
+| TBL-02 | Phase 7 | ✅ Complete |
+| TBL-03 | Phase 7 | ✅ Complete |
+| TBL-04 | Phase 7 | ✅ Complete |
+| DAG-01 | Phase 8 | ✅ Complete |
+| DAG-02 | Phase 8 | ✅ Complete |
+| DAG-03 | Phase 8 | ✅ Complete |
+| DAG-04 | Phase 8 | ✅ Complete |
+| DAG-05 | Phase 8 | ✅ Complete |
 | GW-01 | Phase 9 | Pending |
 | GW-02 | Phase 9 | Pending |
 | GW-03 | Phase 9 | Pending |
