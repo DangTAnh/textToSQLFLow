@@ -93,6 +93,7 @@ def generate(
     Use --interactive to review each evaluation result and choose retry/abort/continue.
     Use --tables to provide table schema metadata (JSON or DDL) for more accurate generation.
     Use --no-optimize to skip DAG optimizer (passthrough raw LLM output).
+    Use --gateway-url to route all LLM calls through the AI GATEWAY service.
     """
     from text_to_sql_flow.pipeline import run_generation, run_evaluation_loop
 
@@ -107,6 +108,7 @@ def generate(
         tables_path=tables,
         tables_include_ddl=tables_include_ddl,
         optimize=optimize,
+        gateway_url=gateway_url,
     )
 
     if auto or interactive:
@@ -189,6 +191,11 @@ def batch(
         "--optimize/--no-optimize",
         help="Enable/disable DAG optimizer for parallel execution (default: enabled)",
     ),
+    gateway_url: Optional[str] = typer.Option(
+        None,
+        "--gateway-url",
+        help="AI GATEWAY URL (e.g. http://localhost:8000). Routes all LLM calls through gateway.",
+    ),
 ):
     """Process multiple descriptions from a text file (GUI-05).
 
@@ -206,4 +213,5 @@ def batch(
         tables_path=tables,
         tables_include_ddl=tables_include_ddl,
         optimize=optimize,
+        gateway_url=gateway_url,
     )
