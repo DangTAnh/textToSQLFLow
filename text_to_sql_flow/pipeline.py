@@ -35,6 +35,8 @@ def run_generation(
     config_path: Optional[Path] = None,
     html: bool = False,
     config: Optional[AppConfig] = None,
+    tables_path: Optional[Path] = None,
+    tables_include_ddl: bool = False,
 ) -> Path:
     """Execute the full generation pipeline.
 
@@ -45,6 +47,8 @@ def run_generation(
         config_path: Optional path to YAML config file.
         html: If True, generate HTML report alongside JSON.
         config: Pre-built AppConfig override (takes precedence over config_path).
+        tables_path: Optional path to table metadata file (JSON or DDL).
+        tables_include_ddl: If True, inject full DDL text instead of summary.
 
     Returns:
         Path to the generated JSON file.
@@ -55,7 +59,16 @@ def run_generation(
     config = config or load_config(config_path)
     active_provider = provider if provider != "opencode" else config.provider
 
-    system_prompt, user_prompt = build_generation_prompt(description)
+    table_metadata = None
+    if tables_path:
+        from text_to_sql_flow.table_metadata.parser import parse_table_metadata_file
+        table_metadata = parse_table_metadata_file(tables_path)
+
+    system_prompt, user_prompt = build_generation_prompt(
+        description,
+        table_metadata=table_metadata,
+        include_ddl=tables_include_ddl,
+    )
     last_error: Optional[str] = None
 
     for attempt in range(1, MAX_RETRIES + 1):
@@ -134,6 +147,8 @@ def run_evaluation_loop(
     html: bool = False,
     config: Optional[AppConfig] = None,
     threshold: float = THRESHOLD,
+    tables_path: Optional[Path] = None,
+    tables_include_ddl: bool = False,
 ) -> Path:
     """Run generate-evaluate-tune loop.
 
@@ -177,6 +192,8 @@ def run_evaluation_loop(
             config_path=config_path,
             html=html,
             config=config,
+            tables_path=tables_path,
+            tables_include_ddl=tables_include_ddl,
         )
 
         # Step 2: Evaluate

@@ -1,0 +1,25 @@
+{
+    "tables": [
+        {
+            "name": "invoice",
+            "description": "Bảng hóa đơn bán hàng",
+            "columns": [
+                {"name": "invoice_id", "type": "string", "description": "Mã hóa đơn", "nullable": false, "is_key": true},
+                {"name": "customer_id", "type": "string", "description": "Mã khách hàng", "nullable": false},
+                {"name": "amount", "type": "decimal(18,2)", "description": "Số tiền", "nullable": false},
+                {"name": "invoice_date", "type": "date", "description": "Ngày hóa đơn", "nullable": false, "partition_column": true},
+                {"name": "status", "type": "string", "description": "Trạng thái", "nullable": true}
+            ],
+            "partitioned_by": ["invoice_date"]
+        },
+        {
+            "name": "customer",
+            "description": "Bảng thông tin khách hàng",
+            "columns": [
+                {"name": "customer_id", "type": "string", "description": "Mã khách hàng", "nullable": false, "is_key": true},
+                {"name": "name", "type": "string", "description": "Tên khách hàng", "nullable": false},
+                {"name": "segment", "type": "string", "description": "Phân khúc", "nullable": true}
+            ]
+        }
+    ]
+}
