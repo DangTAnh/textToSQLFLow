@@ -41,6 +41,8 @@ def run_batch(
     provider: str = "opencode",
     config_path: Optional[Path] = None,
     html: bool = False,
+    tables_path: Optional[Path] = None,
+    tables_include_ddl: bool = False,
 ) -> list[BatchItem]:
     """Run batch generation from a text file.
 
@@ -50,6 +52,8 @@ def run_batch(
         provider: LLM provider for all descriptions.
         config_path: Optional YAML config file path.
         html: If True, generate HTML report alongside JSON.
+        tables_path: Optional path to table metadata file (JSON or DDL).
+        tables_include_ddl: If True, inject full DDL text instead of summary.
 
     Returns:
         List of BatchItem results.
@@ -90,6 +94,8 @@ def run_batch(
                     provider=provider,
                     config_path=config_path,
                     html=html,
+                    tables_path=tables_path,
+                    tables_include_ddl=tables_include_ddl,
                 )
                 results.append(BatchItem(
                     index=i,

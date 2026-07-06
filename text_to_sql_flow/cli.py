@@ -66,37 +66,50 @@ def generate(
         "--interactive",
         help="Pause at each evaluation iteration for user review",
     ),
+    tables: Optional[Path] = typer.Option(
+        None,
+        "--tables",
+        "-t",
+        help="Path to table metadata file (JSON schema or DDL)",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+    ),
+    tables_include_ddl: bool = typer.Option(
+        False,
+        "--tables-include-ddl",
+        help="Include full DDL text in prompt instead of summary",
+    ),
 ):
     """Generate a Spark SQL flow from a business description.
 
     By default, generates the flow once and writes JSON output.
     Use --auto to enable the evaluate-tune loop (auto-retry until quality threshold met).
     Use --interactive to review each evaluation result and choose retry/abort/continue.
+    Use --tables to provide table schema metadata (JSON or DDL) for more accurate generation.
     """
     from text_to_sql_flow.pipeline import run_generation, run_evaluation_loop
 
     console = Console()
 
+    kwargs = dict(
+        description=description,
+        output_dir=output,
+        provider=provider,
+        config_path=config,
+        html=html,
+        tables_path=tables,
+        tables_include_ddl=tables_include_ddl,
+    )
+
     if auto or interactive:
         with console.status("[bold cyan]Running evaluation loop...") as status:
             result_path = run_evaluation_loop(
-                description=description,
-                output_dir=output,
-                auto=auto,
-                interactive=interactive,
-                provider=provider,
-                config_path=config,
-                html=html,
+                **kwargs, auto=auto, interactive=interactive
             )
         console.print(f"[green]Flow generated successfully:[/green] {result_path}")
     else:
-        result_path = run_generation(
-            description=description,
-            output_dir=output,
-            provider=provider,
-            config_path=config,
-            html=html,
-        )
+        result_path = run_generation(**kwargs)
         console.print(f"[green]Flow generated successfully:[/green] {result_path}")
 
 
@@ -150,6 +163,20 @@ def batch(
         "--html",
         help="Generate HTML report alongside each JSON output",
     ),
+    tables: Optional[Path] = typer.Option(
+        None,
+        "--tables",
+        "-t",
+        help="Path to table metadata file (JSON schema or DDL)",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+    ),
+    tables_include_ddl: bool = typer.Option(
+        False,
+        "--tables-include-ddl",
+        help="Include full DDL text in prompt instead of summary",
+    ),
 ):
     """Process multiple descriptions from a text file (GUI-05).
 
@@ -164,4 +191,6 @@ def batch(
         provider=provider,
         config_path=config,
         html=html,
+        tables_path=tables,
+        tables_include_ddl=tables_include_ddl,
     )

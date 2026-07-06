@@ -2,8 +2,17 @@
 
 The system prompt instructs the LLM to produce a structured JSON
 representation of a Spark SQL ETL flow based on the user's business
-description.
+description and optional table metadata.
 """
+
+from typing import Optional
+
+from text_to_sql_flow.table_metadata.models import (
+    TableMetadata,
+    format_metadata_summary,
+    format_ddl_text,
+)
+
 
 SYSTEM_PROMPT = """You are a Spark SQL ETL flow designer. Your task is to analyze a business
 description and produce a structured JSON representation of the Spark SQL ETL
@@ -95,15 +104,38 @@ simple.
 """
 
 
-def build_generation_prompt(description: str) -> tuple[str, str]:
+def build_generation_prompt(
+    description: str,
+    table_metadata: Optional[list[TableMetadata]] = None,
+    include_ddl: bool = False,
+) -> tuple[str, str]:
     """Build the (system_prompt, user_prompt) pair for flow generation.
 
-    The system_prompt is the fixed instruction template above.
-    The user_prompt wraps the user's business description.
+    When *table_metadata* is provided, a structured table summary (or full DDL
+    when *include_ddl* is ``True``) is injected into the user prompt so the
+    LLM can reference actual column names, types, and join keys.
+
+    Args:
+        description: Business description of the Spark SQL ETL flow.
+        table_metadata: Optional parsed table schemas.
+        include_ddl: If True, include full DDL text instead of a summary.
+
+    Returns:
+        ``(system_prompt, user_prompt)`` pair.
     """
     user_prompt = (
         f"Generate a Spark SQL ETL flow for the following business requirement:\n\n"
         f"{description}\n\n"
+    )
+
+    if table_metadata:
+        if include_ddl:
+            user_prompt += format_ddl_text(table_metadata)
+        else:
+            user_prompt += format_metadata_summary(table_metadata)
+        user_prompt += "\n\n"
+
+    user_prompt += (
         f"Respond with ONLY the JSON flow definition. No extra text."
     )
     return SYSTEM_PROMPT, user_prompt
