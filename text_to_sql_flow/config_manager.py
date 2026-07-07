@@ -122,7 +122,8 @@ class ConfigManagerApp:
                 self._dotenv_menu()
 
         if self._dirty:
-            self.console.print("[green][x] Configuration updated.[/]")
+            write_config(self.config)
+            self.console.print("[green][x] Configuration saved.[/]")
         self.console.print("[dim]Exiting config manager.[/]")
 
     # -- Header -------------------------------------------------------------
