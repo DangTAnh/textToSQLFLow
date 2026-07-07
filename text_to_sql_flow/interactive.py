@@ -83,6 +83,13 @@ def interactive_session() -> None:
 
     _render_welcome(console, config)
 
+    # ── Config manager integration ─────────────────────────────────────────
+    if Confirm.ask("[bold]Open configuration manager?[/]", default=False):
+        from text_to_sql_flow.config_manager import run_config_manager
+        run_config_manager()
+        config = _load_session_config(console)
+        console.print("[green][x] Config reloaded[/]")
+
     # ── Multi-description input (REPL-01) ────────────────────────────────
     descriptions = _get_descriptions(console)
 
@@ -135,6 +142,14 @@ def interactive_session() -> None:
 
     # ── Summary + re-generate ────────────────────────────────────────────
     _show_summary(console, session_flows)
+
+    # Config shortcut
+    if Confirm.ask("[bold]Open configuration manager?[/]", default=False):
+        from text_to_sql_flow.config_manager import run_config_manager
+        run_config_manager()
+        config = _load_session_config(console)
+        console.print("[green][x] Config reloaded[/]")
+
     _re_generate(console, session_flows, config, tables_path, tables_include_ddl)
 
 
