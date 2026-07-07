@@ -130,6 +130,8 @@ class AppConfig(BaseModel):
     threshold: Optional[float] = None
     auto: Optional[bool] = None
     optimize: Optional[bool] = None
+    custom_providers: dict[str, dict] = Field(default_factory=dict)
+
 
 
 def load_config(config_path: Optional[Path] = None) -> AppConfig:
@@ -184,6 +186,11 @@ def get_config_status(config: Optional[AppConfig] = None) -> dict:
     for prov, env_var in PROVIDER_ENV_MAP.items():
         key = dotenv.get(env_var) or os.environ.get(env_var)
         keys[prov] = bool(key)
+    # Custom providers
+    for name, info in (cfg.custom_providers or {}).items():
+        env_var = info.get("env_var", f"{name.upper()}_API_KEY")
+        key = dotenv.get(env_var) or os.environ.get(env_var)
+        keys[name] = bool(key)
 
     return {
         "provider": cfg.provider,
@@ -217,12 +224,13 @@ def write_config(config: AppConfig, path: Optional[Path] = None) -> None:
         yaml.dump(existing, f, default_flow_style=False, sort_keys=False)
 
 
-def write_dotenv_key(provider: str, api_key: str) -> None:
+def write_dotenv_key(provider: str, api_key: str, env_var: Optional[str] = None) -> None:
     """Write (or remove) an API key for *provider* in .env.
 
     Pass *api_key* as ``""`` or ``None`` to remove the entry.
     """
-    env_var = PROVIDER_ENV_MAP.get(provider)
+    if not env_var:
+        env_var = PROVIDER_ENV_MAP.get(provider)
     if not env_var:
         return
 
