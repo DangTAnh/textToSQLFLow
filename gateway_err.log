@@ -1,10 +1,48 @@
-INFO:     Started server process [29436]
+INFO:     Started server process [21048]
 INFO:     Waiting for application startup.
-2026-07-08 01:23:37,024 [WARNING] gateway.config: Environment variable OPENAI_API_KEY is not set
-2026-07-08 01:23:37,025 [WARNING] gateway.config: Environment variable OPENCODE_API_KEY is not set
-2026-07-08 01:23:37,025 [INFO] gateway.main: Gateway started — 2 provider(s), 2 routing rule(s), cache TTL=300s
+2026-07-08 01:39:30,915 [WARNING] gateway.config: Environment variable OPENAI_API_KEY is not set
+2026-07-08 01:39:30,915 [WARNING] gateway.config: Environment variable OPENCODE_API_KEY is not set
+2026-07-08 01:39:30,916 [INFO] gateway.main: Gateway started — 2 provider(s), 2 routing rule(s), cache TTL=300s
 INFO:     Application startup complete.
-ERROR:    [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8000): [winerror 10048] only one usage of each socket address (protocol/network address/port) is normally permitted
-INFO:     Waiting for application shutdown.
-2026-07-08 01:23:37,026 [INFO] gateway.main: Gateway shutting down
-INFO:     Application shutdown complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:52305 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52307 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52309 - "GET /health HTTP/1.1" 200 OK
+2026-07-08 01:40:02,521 [WARNING] gateway.llm: Primary provider openai failed: Illegal header value b'Bearer '
+2026-07-08 01:40:02,522 [INFO] gateway.llm: Falling back to opencode
+2026-07-08 01:40:02,864 [WARNING] gateway.llm: Fallback opencode also failed: Illegal header value b'Bearer '
+INFO:     127.0.0.1:52311 - "POST /v1/chat/completions HTTP/1.1" 502 Bad Gateway
+2026-07-08 01:40:06,835 [WARNING] gateway.llm: Primary provider openai failed: Illegal header value b'Bearer '
+2026-07-08 01:40:06,836 [INFO] gateway.llm: Falling back to opencode
+2026-07-08 01:40:07,185 [WARNING] gateway.llm: Fallback opencode also failed: Illegal header value b'Bearer '
+INFO:     127.0.0.1:52315 - "POST /v1/chat/completions HTTP/1.1" 502 Bad Gateway
+2026-07-08 01:40:11,477 [WARNING] gateway.llm: Primary provider openai failed: Illegal header value b'Bearer '
+2026-07-08 01:40:11,478 [INFO] gateway.llm: Falling back to opencode
+2026-07-08 01:40:11,814 [WARNING] gateway.llm: Fallback opencode also failed: Illegal header value b'Bearer '
+INFO:     127.0.0.1:52319 - "POST /v1/chat/completions HTTP/1.1" 502 Bad Gateway
+2026-07-08 01:40:13,911 [WARNING] gateway.llm: Primary provider openai failed: Illegal header value b'Bearer '
+2026-07-08 01:40:13,912 [INFO] gateway.llm: Falling back to opencode
+2026-07-08 01:40:14,292 [WARNING] gateway.llm: Fallback opencode also failed: Illegal header value b'Bearer '
+INFO:     127.0.0.1:52323 - "POST /v1/chat/completions HTTP/1.1" 502 Bad Gateway
+2026-07-08 01:40:17,707 [WARNING] gateway.llm: Primary provider openai failed: Illegal header value b'Bearer '
+2026-07-08 01:40:17,708 [INFO] gateway.llm: Falling back to opencode
+2026-07-08 01:40:18,059 [WARNING] gateway.llm: Fallback opencode also failed: Illegal header value b'Bearer '
+INFO:     127.0.0.1:52327 - "POST /v1/chat/completions HTTP/1.1" 502 Bad Gateway
+2026-07-08 01:40:22,266 [WARNING] gateway.llm: Primary provider openai failed: Illegal header value b'Bearer '
+2026-07-08 01:40:22,267 [INFO] gateway.llm: Falling back to opencode
+2026-07-08 01:40:22,598 [WARNING] gateway.llm: Fallback opencode also failed: Illegal header value b'Bearer '
+INFO:     127.0.0.1:52331 - "POST /v1/chat/completions HTTP/1.1" 502 Bad Gateway
+2026-07-08 01:40:24,707 [WARNING] gateway.llm: Primary provider openai failed: Illegal header value b'Bearer '
+2026-07-08 01:40:24,708 [INFO] gateway.llm: Falling back to opencode
+2026-07-08 01:40:25,066 [WARNING] gateway.llm: Fallback opencode also failed: Illegal header value b'Bearer '
+INFO:     127.0.0.1:52335 - "POST /v1/chat/completions HTTP/1.1" 502 Bad Gateway
+2026-07-08 01:40:28,247 [WARNING] gateway.llm: Primary provider openai failed: Illegal header value b'Bearer '
+2026-07-08 01:40:28,248 [INFO] gateway.llm: Falling back to opencode
+2026-07-08 01:40:28,605 [WARNING] gateway.llm: Fallback opencode also failed: Illegal header value b'Bearer '
+INFO:     127.0.0.1:52340 - "POST /v1/chat/completions HTTP/1.1" 502 Bad Gateway
+2026-07-08 01:40:33,328 [WARNING] gateway.llm: Primary provider openai failed: Illegal header value b'Bearer '
+2026-07-08 01:40:33,329 [INFO] gateway.llm: Falling back to opencode
+2026-07-08 01:40:33,664 [WARNING] gateway.llm: Fallback opencode also failed: Illegal header value b'Bearer '
+INFO:     127.0.0.1:52345 - "POST /v1/chat/completions HTTP/1.1" 502 Bad Gateway
+INFO:     127.0.0.1:52351 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52354 - "GET /health HTTP/1.1" 200 OK
