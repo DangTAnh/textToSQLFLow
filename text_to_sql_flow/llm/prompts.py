@@ -54,23 +54,37 @@ The JSON must conform to this schema:
 
 ## Spark Optimization Principles
 
-Apply these rules to every flow:
+Always optimize for distributed execution. Apply these rules to every flow:
 
-- **Reduce data early**: push predicates to source scans, prune columns at LOAD,
-  aggregate before joins when business logic allows. Every downstream step should
-  process less data than the step before.
-- **Join strategy**: prefer `LEFT ANTI JOIN` over `LEFT JOIN ... WHERE right IS NULL`.
-  Prefer `LEFT SEMI JOIN` when only existence is needed. Deduplicate join keys
-  before joining. Avoid joins that multiply rows unnecessarily.
-- **Filter pushdown**: apply WHERE conditions in the earliest possible step
-  (LOAD or FILTER), not in later TRANSFORM or AGGREGATE steps.
-- **Projection**: never use `SELECT *` except in the final SAVE step when the
+- **Predicate Pushdown**: push WHERE conditions to the earliest possible step
+  (LOAD or FILTER). Filter before join, filter before aggregation.
+- **Projection Pruning**: never use `SELECT *` except in a final SAVE step whose
   upstream schema already exactly matches the output. Always list columns explicitly.
-- **Broadcast hints**: only for known small dimension tables. Do not add
-  `/*+ BROADCAST */` speculatively.
+- **Reduce data early**: prune columns at LOAD, aggregate before joins when
+  business logic allows, deduplicate before joining. Every downstream step should
+  process less data than the step before.
+- **Early aggregation**: when the business question aggregates after a join,
+  check whether partial aggregation can happen before the join to reduce the
+  build side.
+- **DISTINCT before joins**: deduplicate join keys before joining to avoid row
+  explosion. When only unique keys are required, apply DISTINCT on the build side
+  before the join.
+- **Join strategy (preference order)**:
+  1. `LEFT SEMI JOIN` — when only existence is required (no right-side columns).
+  2. `LEFT ANTI JOIN` — when non-existence is required (no right-side columns).
+  3. `LEFT / INNER JOIN` — when columns from both sides are needed.
+  4. Avoid `LEFT JOIN ... WHERE right IS NULL` — use LEFT ANTI instead.
+  5. Deduplicate join keys before joining. Avoid joins that multiply rows.
+- **Broadcast hints**: only when one side is explicitly known to be a small
+  dimension table. Do NOT assume a table is small. If table sizes are unknown,
+  do not emit BROADCAST hints — let Spark AQE/CBO choose the join strategy.
 - **Minimize shuffle**: prefer narrow transformations. Reduce dataset size before
-  wide operations (joins, aggregations). Avoid intermediate datasets that are
-  used only once.
+  wide operations (joins, aggregations). Avoid intermediate datasets used only once.
+- **Reduce intermediate dataset size**: apply early filtering, column pruning,
+  and early aggregation before expensive operations like joins or window functions.
+- **Avoid redundant operations**: do not repeat filters already guaranteed by
+  upstream steps. For example, if LOAD already filters `WHERE customer_id IS NOT NULL`,
+  a downstream DEDUP step should not re-apply the same filter.
 - **Temp views**: every downstream SQL must reference upstream temp views, not
   original source tables.
 
@@ -90,7 +104,8 @@ simple.
 
 ## Rules
 
-1. **steps.name** — must be unique. Use allowed prefixes:
+1. **name** (flow-level) — use UPPER_SNAKE_CASE, e.g. `INACTIVE_CUSTOMERS_90_DAYS`.
+   **steps.name** — must be unique. Use allowed prefixes:
    `LOAD_`, `FILTER_`, `TRANSFORM_`, `JOIN_`, `AGGREGATE_`, `ENRICH_`, `SAVE_`.
    Name describes WHAT the step does, not just the output.
    Never use generic names like `PROCESS_DATA`.
@@ -118,18 +133,29 @@ simple.
 6. **steps.output.table** — target HDFS table in parquet format. Only the final
    SAVE step should set a table name; intermediate steps set empty string.
    Use `${TABLE_VAR}` here too when the table name is a variable.
-7. **steps.active** — true for enabled steps, false for disabled.
-8. **Output ONLY valid JSON** — no extra text before or after.
-9. **Data quality** — add WHERE clause filters to exclude NULLs in critical
-   columns (dates, measure/amount fields, join keys). Handle NULLs in
-   aggregations safely: use `COALESCE` / `IFNULL` or filter them out explicitly
-   so logic like `SUM(amount)` or `MONTH(invoice_date)` never receives NULL
-   input.
-10. **Date functions** — use standard Spark SQL functions only:
+7. **SAVE step** — the SAVE step SQL should only expose the final dataset
+   (`SELECT ... FROM upstream_view`). Do not repeat transformations already
+   done by upstream steps. The actual persistence mechanism is controlled by
+   `steps.output.table`.
+8. **steps.active** — true for enabled steps, false for disabled.
+9. **Output ONLY valid JSON** — no extra text before or after.
+10. **Data quality** — add WHERE clause filters to exclude NULLs in critical
+    columns (dates, measure/amount fields, join keys). Handle NULLs in
+    aggregations safely: use `COALESCE` / `IFNULL` or filter them out explicitly
+    so logic like `SUM(amount)` or `MONTH(invoice_date)` never receives NULL
+    input.
+11. **No speculative hints** — do not add `/*+ BROADCAST */`, `/*+ REPARTITION */`,
+    `/*+ COALESCE */`, or `/*+ CLUSTER BY */` hints unless the business
+    description explicitly justifies them. Let Spark AQE/CBO handle optimization
+    decisions when metadata is unavailable.
+12. **Date functions** — use standard Spark SQL functions only:
     `DATE_TRUNC('month', date_col)` for month truncation,
     `DATE_FORMAT(date_col, 'yyyy-MM')` for month formatting.
     Do NOT use `TRUNC(date_col, 'MONTH')` — it is not portable across Spark
     versions.
+13. **Diagram layout** — arrange the DAG from left to right (`x` increases).
+    Steps with the same `order` share the same Y coordinate.
+    Dependent steps appear to the right of their parents.
 """
 
 
