@@ -86,6 +86,9 @@ def interactive_session() -> None:
     # ── Multi-description input (REPL-01) ────────────────────────────────
     descriptions = _get_descriptions(console)
 
+    # ── Table metadata (optional) ────────────────────────────────────────
+    tables_path, tables_include_ddl = _prompt_table_metadata(console)
+
     # ── Generation loop ──────────────────────────────────────────────────
     for i, desc in enumerate(descriptions, 1):
         if len(descriptions) > 1:
@@ -110,6 +113,7 @@ def interactive_session() -> None:
             console, desc, output_dir, provider, cfg, threshold,
             getattr(config, "gateway_url", None),
             getattr(config, "optimize", True),
+            tables_path, tables_include_ddl,
         )
 
         if result_path:
@@ -131,7 +135,7 @@ def interactive_session() -> None:
 
     # ── Summary + re-generate ────────────────────────────────────────────
     _show_summary(console, session_flows)
-    _re_generate(console, session_flows, config)
+    _re_generate(console, session_flows, config, tables_path, tables_include_ddl)
 
 
 # ── Config-aware (REPL-03) ──────────────────────────────────────────────
@@ -192,6 +196,33 @@ def _get_descriptions(console: Console) -> list[str]:
     if descs:
         console.print(f"[green]{len(descs)}[/] description(s) entered")
     return descs
+
+
+# ── Table metadata (optional) ─────────────────────────────────────────
+
+def _prompt_table_metadata(console: Console) -> tuple[Optional[Path], bool]:
+    """Prompt user to optionally provide a table schema file.
+
+    Returns (path_or_None, include_full_ddl_or_False).
+    """
+    if not Confirm.ask("[bold]Provide table schema?[/]", default=False):
+        return None, False
+
+    path_str = Prompt.ask("[bold]Path to schema file[/] (.json / .sql / .ddl)")
+    if not path_str.strip():
+        return None, False
+
+    p = Path(path_str.strip())
+    if not p.exists():
+        console.print(f"[yellow]File not found: {p}[/]")
+        return None, False
+
+    include_ddl = False
+    if p.suffix.lower() in {".sql", ".ddl"}:
+        include_ddl = Confirm.ask("[bold]Include full DDL in prompt?[/]", default=False)
+
+    console.print(f"[dim]Loaded table schema: {p.name}[/]")
+    return p, include_ddl
 
 
 # ── Provider selector with search (REPL-02) ─────────────────────────────
@@ -302,6 +333,8 @@ def _generate_with_progress(
     threshold: float,
     gateway_url: Optional[str],
     optimize: bool,
+    tables_path: Optional[Path] = None,
+    tables_include_ddl: bool = False,
 ) -> Optional[Path]:
     """Generate a flow with step-by-step progress display."""
     steps = [
@@ -337,6 +370,8 @@ def _generate_with_progress(
                         threshold=threshold,
                         gateway_url=gateway_url,
                         optimize=optimize,
+                        tables_path=tables_path,
+                        tables_include_ddl=tables_include_ddl,
                     )
                 except Exception as e:
                     # REPL-06: Rich traceback
@@ -465,7 +500,9 @@ def _ask_continue(console: Console) -> bool:
 
 # ── Re-generate ─────────────────────────────────────────────────────────
 
-def _re_generate(console: Console, flows: list[SessionFlow], config: AppConfig) -> None:
+def _re_generate(console: Console, flows: list[SessionFlow], config: AppConfig,
+                 tables_path: Optional[Path] = None,
+                 tables_include_ddl: bool = False) -> None:
     """Offer to re-generate a previous flow with a different provider."""
     success_flows = [f for f in flows if f.status == "success"]
     if not success_flows:
@@ -499,6 +536,7 @@ def _re_generate(console: Console, flows: list[SessionFlow], config: AppConfig) 
         console, selected.description, output_dir, new_provider, new_cfg,
         new_threshold, getattr(config, "gateway_url", None),
         getattr(config, "optimize", True),
+        tables_path, tables_include_ddl,
     )
 
     if result_path:
