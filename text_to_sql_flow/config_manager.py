@@ -13,6 +13,7 @@ Usage:
 """
 
 import logging
+import os
 import subprocess
 import sys
 import time
@@ -82,6 +83,11 @@ def start_local_gateway(console: Console) -> None:
 
     from rich.progress import Progress, SpinnerColumn, TextColumn
 
+    # Merge .env vars into subprocess environment so gateway resolves them
+    from text_to_sql_flow.config import load_dotenv
+    env = os.environ.copy()
+    env.update({k: v for k, v in load_dotenv().items() if v})
+
     with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as p:
         task = p.add_task(f"[cyan]Starting gateway on {url}...  (0/15)", total=None)
         try:
@@ -90,6 +96,7 @@ def start_local_gateway(console: Console) -> None:
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.PIPE,
                 text=True,
+                env=env,
             )
         except FileNotFoundError:
             console.print("[red]Failed to start gateway — gateway.main not found[/]")

@@ -1,0 +1,4 @@
+provider: opencode
+temperature: 0.3
+gateway_url: http://localhost:8000
+custom_providers: {}
