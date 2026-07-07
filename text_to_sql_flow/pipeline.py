@@ -61,7 +61,7 @@ def run_generation(
         RuntimeError: If generation fails after all retries.
     """
     config = config or load_config(config_path)
-    active_provider = provider if provider != "opencode" else config.provider
+    active_provider = provider
 
     table_metadata = None
     if tables_path:
@@ -199,7 +199,7 @@ def run_evaluation_loop(
 
     # Load config once for the entire loop
     config = config or load_config(config_path)
-    active_provider = provider if provider != "opencode" else config.provider
+    active_provider = provider
 
     # Track evaluated iterations for best-pick at the end
     scored: list[tuple[float, int, Path]] = []
