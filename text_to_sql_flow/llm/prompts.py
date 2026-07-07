@@ -90,13 +90,25 @@ Always optimize for distributed execution. Apply these rules to every flow:
 
 ## ETL Structure Requirements
 
-Always decompose the flow into multiple granular steps — one logical operation
-per step. A typical 4-step structure (expand as needed):
+Decompose only when the transformation represents a distinct business or
+optimization stage. Do not create nodes solely for cosmetic separation.
 
-1. **LOAD** — read source table(s), select required columns only, cast types.
-2. **FILTER** / **TRANSFORM** — apply WHERE conditions, clean data, join tables.
-3. **AGGREGATE** — group by dimensions, compute measures.
-4. **SAVE** — write final result to output table.
+Do not create a separate step for a transformation that can be performed
+as part of a simple LOAD operation without reducing readability.
+
+Examples:
+- `LOAD DISTINCT customer_id` — do not create a separate DEDUP step.
+- `LOAD filtered transactions` — do not create a separate FILTER step.
+
+Typical stages include:
+- **LOAD** — read source table(s), select required columns, cast types.
+- **FILTER** — apply WHERE conditions that cannot be pushed into LOAD.
+- **TRANSFORM** — cleanse, cast, derive columns, apply business logic.
+- **JOIN** — combine tables when LOAD already projects required columns.
+- **AGGREGATE** — group by dimensions, compute measures.
+- **SAVE** — write final result to output table.
+
+Only include stages required by the business logic.
 
 Each step must be a separate JSON object in the `steps` array. Do NOT merge
 multiple operations into one SQL statement unless the operations are trivially
@@ -153,9 +165,6 @@ simple.
     `DATE_FORMAT(date_col, 'yyyy-MM')` for month formatting.
     Do NOT use `TRUNC(date_col, 'MONTH')` — it is not portable across Spark
     versions.
-13. **Diagram layout** — arrange the DAG from left to right (`x` increases).
-    Steps with the same `order` share the same Y coordinate.
-    Dependent steps appear to the right of their parents.
 """
 
 

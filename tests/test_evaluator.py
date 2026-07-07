@@ -13,11 +13,14 @@ from text_to_sql_flow.evaluator import (
 )
 
 SAMPLE_EVALUATION_RESPONSE = json.dumps({
-    "score": 8.5,
+    "score": 9.0,
     "dimensions": {
         "correctness": 9,
         "completeness": 8,
-        "spark_best_practices": 8,
+        "granularity": 8,
+        "data_quality": 8,
+        "spark_execution_efficiency": 9,
+        "spark_coding_best_practices": 8,
         "dependency_correctness": 9,
         "code_quality": 8,
     },
@@ -47,7 +50,7 @@ class TestParseEvaluationResponse:
     def test_parse_valid_evaluation_response(self):
         """Valid JSON parses to EvaluationResult with passed=True."""
         result = parse_evaluation_response(SAMPLE_EVALUATION_RESPONSE)
-        assert result.score == 8.5
+        assert result.score == 9.0
         assert result.passed is True
         assert "well-structured" in result.feedback
         assert result.dimensions["correctness"] == 9
@@ -63,7 +66,7 @@ class TestParseEvaluationResponse:
         """JSON wrapped in ```json block is parsed correctly."""
         wrapped = f"```json\n{SAMPLE_EVALUATION_RESPONSE}\n```"
         result = parse_evaluation_response(wrapped)
-        assert result.score == 8.5
+        assert result.score == 9.0
         assert result.passed is True
 
     def test_parse_invalid_response_raises_error(self):
@@ -87,6 +90,36 @@ class TestParseEvaluationResponse:
         with pytest.raises(ValueError, match="feedback"):
             parse_evaluation_response(json.dumps({"score": 8.0}))
 
+    def test_parse_fails_when_key_dimension_below_minimum(self):
+        """Overall >= threshold but key dimension below minimum → passed=False."""
+        resp = json.dumps({
+            "score": 8.8,
+            "dimensions": {
+                "correctness": 7,
+                "spark_execution_efficiency": 9,
+                "dependency_correctness": 9,
+            },
+            "feedback": "Correctness is borderline",
+        })
+        result = parse_evaluation_response(resp)
+        assert result.score == 8.8
+        assert result.passed is False
+
+    def test_parse_passes_when_all_minimums_met(self):
+        """Overall >= threshold and all key dimensions >= 8 → passed=True."""
+        resp = json.dumps({
+            "score": 8.5,
+            "dimensions": {
+                "correctness": 8,
+                "spark_execution_efficiency": 8,
+                "dependency_correctness": 9,
+            },
+            "feedback": "Meets minimum requirements",
+        })
+        result = parse_evaluation_response(resp)
+        assert result.score == 8.5
+        assert result.passed is True
+
 
 class TestEvaluateFlow:
     def test_evaluate_flow_with_mock_llm(self, tmp_path):
@@ -97,7 +130,7 @@ class TestEvaluateFlow:
         with patch("text_to_sql_flow.evaluator.call_llm", return_value=SAMPLE_EVALUATION_RESPONSE):
             result = evaluate_flow(flow_file)
             assert isinstance(result, EvaluationResult)
-            assert result.score == 8.5
+            assert result.score == 9.0
             assert result.passed is True
 
     def test_evaluate_flow_handles_llm_error(self, tmp_path):
@@ -117,4 +150,4 @@ class TestEvaluateFlow:
 
 class TestConstants:
     def test_threshold_constant(self):
-        assert THRESHOLD == 7.0
+        assert THRESHOLD == 8.5

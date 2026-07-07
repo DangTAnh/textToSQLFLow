@@ -1,8 +1,12 @@
 """LLM-based evaluator for Spark SQL ETL flow quality.
 
 Uses the same LLM provider as generation to score a generated flow
-against a 5-dimension rubric: correctness, completeness, Spark best
-practices, dependency correctness, and code quality.
+against an 8-dimension rubric: correctness, completeness, granularity,
+data_quality, spark_execution_efficiency, spark_coding_best_practices,
+dependency_correctness, and code_quality.
+
+Pass requires: overall >= 8.5 AND correctness >= 8 AND
+spark_execution_efficiency >= 8 AND dependency_correctness >= 8.
 
 Usage::
     result = evaluate_flow(Path("output/flow.json"), provider="opencode")
@@ -23,17 +27,24 @@ logger = logging.getLogger(__name__)
 
 # ── Constants ─────────────────────────────────────────────────────────────
 
-THRESHOLD = 7.0
-"""Score threshold for passing evaluation (per EVAL-02)."""
+THRESHOLD = 8.5
+"""Minimum overall score for an evaluation to pass."""
 
 MAX_ITERATIONS = 5
 """Maximum iterations for evaluate-tune loop (per EVAL-04)."""
+
+PASS_MINIMUMS: dict[str, float] = {
+    "correctness": 8.0,
+    "spark_execution_efficiency": 8.0,
+    "dependency_correctness": 8.0,
+}
+"""Per-dimension minimum scores required for pass (in addition to overall threshold)."""
 
 # ── Prompt ────────────────────────────────────────────────────────────────
 
 EVALUATOR_SYSTEM_PROMPT = """You are a senior data engineer evaluating a Spark SQL ETL flow definition.
 
-Evaluate the flow JSON on these 7 dimensions, each scored 1-10:
+Evaluate the flow JSON on these 8 dimensions, each scored 1-10:
 
 1. **correctness** — SQL syntax correctness, proper Spark SQL functions,
    no logical errors or column mismatches.
@@ -41,40 +52,45 @@ Evaluate the flow JSON on these 7 dimensions, each scored 1-10:
 2. **completeness** — All required steps from the business description
    are covered, intermediate transformations exist.
 
-3. **granularity** — ETL is decomposed into multiple granular steps
-   (e.g. LOAD → FILTER → AGGREGATE → SAVE) rather than one monolithic
-   step. Each logical operation has its own node in the DAG. Penalize
-   single-step flows heavily.
+3. **granularity** — ETL is decomposed into meaningful stages, not
+   monolithic. Each logical operation has its own node. Penalize
+   single-step flows. Do NOT penalize combining a trivial filter or
+   dedup into LOAD when it improves readability.
 
 4. **data_quality** — NULL-safe aggregations (COALESCE/IFNULL or explicit
    filters), WHERE clauses exclude NULLs on critical columns (dates, measures,
    join keys) so no downstream logic receives NULL input.
 
-4. **spark_best_practices** — Uses `DATE_TRUNC`/`DATE_FORMAT` (not `TRUNC`),
-   `${TABLE_VAR}` for table names (not hardcoded), broadcast hints for
-   small tables, avoids UDFs where built-in functions suffice, proper
-   partitioning, uses temp views appropriately.
+5. **spark_execution_efficiency** — Predicate pushdown (filter early),
+   projection pruning (no SELECT *), join strategy (SEMI/ANTI before
+   LEFT JOIN, dedup keys before joining), broadcast only for known-small
+   tables, early aggregation, minimize shuffle, avoid redundant filters.
 
-5. **dependency_correctness** — Step parents list matches actual
+6. **spark_coding_best_practices** — Uses `DATE_TRUNC`/`DATE_FORMAT`
+   (not `TRUNC`), `${TABLE_VAR}` for table names (not hardcoded), temp
+   views used correctly, column aliases, uppercase keywords, one column
+   per line.
+
+7. **dependency_correctness** — Step parents list matches actual
    table/view dependencies, execution order is correct (parallel steps
    have same order number). Each step declares proper parent references
    forming a valid DAG — no orphan steps, no circular dependencies.
 
-6. **code_quality** — SQL is readable, uses consistent naming with verb
+8. **code_quality** — SQL is readable, uses consistent naming with verb
    prefixes (`LOAD_*`, `FILTER_*`, `AGGREGATE_*`, `SAVE_*`), descriptions
-   are meaningful, diagram positions are reasonable.
+   are meaningful.
 
 Respond with ONLY valid JSON in this exact shape (no extra text):
 
 {
     "score": 8.6,
-    "pass": true,
     "dimensions": {
         "correctness": 9,
         "completeness": 8,
         "granularity": 7,
         "data_quality": 8,
-        "spark_best_practices": 7,
+        "spark_execution_efficiency": 8,
+        "spark_coding_best_practices": 7,
         "dependency_correctness": 9,
         "code_quality": 8
     },
@@ -82,6 +98,9 @@ Respond with ONLY valid JSON in this exact shape (no extra text):
     "feedback": "The flow covers the main requirements but ...",
     "confidence": 0.91
 }
+
+Pass gate: overall >= 8.5 AND correctness >= 8 AND
+spark_execution_efficiency >= 8 AND dependency_correctness >= 8.
 """
 
 # ── Models ────────────────────────────────────────────────────────────────
@@ -92,7 +111,7 @@ class EvaluationResult(BaseModel):
 
     Attributes:
         score: Overall quality score 0-10.
-        passed: True when score >= THRESHOLD.
+        passed: True when score >= THRESHOLD AND per-dimension minimums met.
         dimensions: Per-dimension scores (correctness, completeness, …).
         critical_issues: List of blocking issues (from LLM).
         feedback: Detailed feedback text from the LLM evaluator.
@@ -178,8 +197,13 @@ def parse_evaluation_response(response_text: str, threshold: float = THRESHOLD) 
     confidence = data.get("confidence")
     if confidence is not None:
         confidence = float(confidence)
-    passed = float(score) >= threshold
-
+    passed = (
+        float(score) >= threshold
+        and all(
+            dimensions.get(dim, 10) >= min_score
+            for dim, min_score in PASS_MINIMUMS.items()
+        )
+    )
     return EvaluationResult(
         score=float(score),
         feedback=str(feedback),
