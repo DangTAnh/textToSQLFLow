@@ -71,10 +71,22 @@ def call_llm_via_gateway(
     if config and config.max_tokens:
         body["max_tokens"] = config.max_tokens
 
+    # Forward API key to gateway so it doesn't need its own env copy
+    headers = {}
+    if config and config.api_key:
+        headers["X-API-Key"] = config.api_key
+    else:
+        try:
+            key = resolve_api_key(provider, config)
+            if key:
+                headers["X-API-Key"] = key
+        except ValueError:
+            pass
+
     last_error: Optional[Exception] = None
     for attempt in range(MAX_RETRIES):
         try:
-            resp = httpx.post(url, json=body, timeout=120.0)
+            resp = httpx.post(url, json=body, headers=headers, timeout=120.0)
             resp.raise_for_status()
             data = resp.json()
             return data["choices"][0]["message"]["content"]
