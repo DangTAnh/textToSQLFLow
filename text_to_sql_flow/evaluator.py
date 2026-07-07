@@ -209,11 +209,18 @@ def parse_evaluation_response(response_text: str, threshold: float = THRESHOLD) 
 
     dimensions = data.get("dimensions", {})
     critical_issues = data.get("critical_issues", [])
+
+    # Validate that all required dimensions are present
+    missing = [d for d in PASS_MINIMUMS if d not in dimensions]
+    if missing:
+        raise ValueError(
+            f"Evaluator response missing required dimensions: {', '.join(missing)}"
+        )
     passed = (
         float(score) >= threshold
         and len(critical_issues) == 0
         and all(
-            dimensions.get(dim, 0) >= min_score
+            dimensions[dim] >= min_score
             for dim, min_score in PASS_MINIMUMS.items()
         )
     )

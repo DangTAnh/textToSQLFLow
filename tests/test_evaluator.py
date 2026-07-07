@@ -57,7 +57,10 @@ class TestParseEvaluationResponse:
 
     def test_parse_below_threshold_response(self):
         """Score below threshold sets passed=False."""
-        low_score = json.dumps({"score": 5.0, "feedback": "Needs improvement", "dimensions": {"correctness": 5}})
+        low_score = json.dumps({
+            "score": 5.0, "feedback": "Needs improvement",
+            "dimensions": {"correctness": 5, "spark_execution_efficiency": 6, "dependency_correctness": 7},
+        })
         result = parse_evaluation_response(low_score)
         assert result.score == 5.0
         assert result.passed is False
@@ -75,13 +78,7 @@ class TestParseEvaluationResponse:
             parse_evaluation_response("This is not JSON at all")
 
     def test_parse_missing_fields_handled(self):
-        """Missing 'dimensions' defaults to empty dict, score/feedback required."""
-        # Missing dimensions is OK
-        resp = json.dumps({"score": 7.5, "feedback": "Good"})
-        result = parse_evaluation_response(resp)
-        assert result.score == 7.5
-        assert result.dimensions == {}
-
+        """Missing score/feedback/dimensions each raise ValueError."""
         # Missing score raises error
         with pytest.raises(ValueError, match="score"):
             parse_evaluation_response(json.dumps({"feedback": "No score"}))
@@ -89,6 +86,13 @@ class TestParseEvaluationResponse:
         # Missing feedback raises error
         with pytest.raises(ValueError, match="feedback"):
             parse_evaluation_response(json.dumps({"score": 8.0}))
+
+        # Missing required dimension raises error
+        with pytest.raises(ValueError, match="missing required dimensions"):
+            parse_evaluation_response(json.dumps({
+                "score": 8.5, "feedback": "No dims",
+                "dimensions": {"code_quality": 8},
+            }))
 
     def test_parse_fails_when_key_dimension_below_minimum(self):
         """Overall >= threshold but key dimension below minimum → passed=False."""
