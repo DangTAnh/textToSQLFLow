@@ -187,9 +187,11 @@ def _load_session_config(console: Console) -> AppConfig:
 
 def _render_welcome(console: Console, config: AppConfig) -> None:
     console.print()
+    gateway_url = getattr(config, "gateway_url", None)
+    gateway_line = f" | [dim]Gateway: [/]{'[green][x] ' + gateway_url + '[/]' if gateway_url else '[yellow]direct[/]'}"
     console.print(Panel.fit(
         "[bold cyan]TextToSQLFlow -- Interactive Mode (Enhanced v1.3)[/]\n"
-        f"[dim]Default provider: {config.provider or 'opencode'}[/]",
+        f"[dim]Default provider: {config.provider or 'opencode'}{gateway_line}[/]",
         border_style="cyan",
     ))
     console.print()
