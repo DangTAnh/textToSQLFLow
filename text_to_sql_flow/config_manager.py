@@ -102,7 +102,6 @@ class ConfigManagerApp:
     def run(self) -> None:
         """Main menu loop."""
         while True:
-            self.console.clear()
             self._render_header()
             choice = self._main_menu()
 
@@ -166,7 +165,6 @@ class ConfigManagerApp:
 
     def _provider_menu(self) -> None:
         while True:
-            self.console.clear()
             self.console.print(Panel("[bold]Provider Management[/]", border_style="cyan"))
             self.console.print()
 
@@ -299,7 +297,6 @@ class ConfigManagerApp:
 
     def _api_key_menu(self) -> None:
         while True:
-            self.console.clear()
             self.console.print(Panel("[bold]API Key Management[/]", border_style="cyan"))
             self.console.print()
 
@@ -389,7 +386,6 @@ class ConfigManagerApp:
 
     def _gateway_menu(self) -> None:
         while True:
-            self.console.clear()
             self.console.print(Panel("[bold]Gateway Configuration[/]", border_style="cyan"))
             self.console.print()
 
@@ -429,7 +425,6 @@ class ConfigManagerApp:
 
     def _preferences_menu(self) -> None:
         while True:
-            self.console.clear()
             self.console.print(Panel("[bold]Evaluation Preferences[/]", border_style="cyan"))
             self.console.print()
 
@@ -490,7 +485,6 @@ class ConfigManagerApp:
 
     def _config_file_menu(self) -> None:
         while True:
-            self.console.clear()
             self.console.print(Panel("[bold]Config File Management[/]", border_style="cyan"))
             self.console.print()
 
@@ -535,7 +529,6 @@ class ConfigManagerApp:
 
     def _dotenv_menu(self) -> None:
         while True:
-            self.console.clear()
             self.console.print(Panel("[bold].env File Management[/]", border_style="cyan"))
             self.console.print()
 
