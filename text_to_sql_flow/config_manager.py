@@ -13,6 +13,7 @@ Usage:
 """
 
 import logging
+import subprocess
 import sys
 from pathlib import Path
 from typing import Optional
@@ -387,6 +388,68 @@ class ConfigManagerApp:
 
     # -- Gateway menu -------------------------------------------------------
 
+    def _start_local_gateway(self) -> None:
+        """Start the AI GATEWAY as a background subprocess."""
+        port = 8000
+        try:
+            from gateway.config import load_gateway_config
+            gw_cfg = load_gateway_config()
+            port = gw_cfg.port
+        except Exception:
+            pass
+
+        url = f"http://localhost:{port}"
+        if self._is_gateway_running(url):
+            self.console.print(f"[yellow]Gateway already running at {url}[/]")
+            Prompt.ask("[dim]Press Enter to continue[/]", default="")
+            return
+
+        # Auto-set gateway URL if not already set
+        if not self.config.gateway_url:
+            self.config.gateway_url = url
+            self._dirty = True
+
+        from rich.progress import Progress, SpinnerColumn, TextColumn
+        import time
+
+        with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=self.console) as p:
+            task = p.add_task(f"[cyan]Starting gateway on {url}...  (0/10)", total=None)
+            try:
+                proc = subprocess.Popen(
+                    [sys.executable, "-m", "gateway.main"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+            except FileNotFoundError:
+                self.console.print("[red]Failed to start gateway — gateway.main not found[/]")
+                Prompt.ask("[dim]Press Enter to continue[/]", default="")
+                return
+
+            started = False
+            for attempt in range(10):
+                time.sleep(0.5)
+                if self._is_gateway_running(url):
+                    started = True
+                    break
+                p.update(task, description=f"[cyan]Starting gateway on {url}... ({attempt + 1}/10)")
+
+        if started:
+            self.console.print(f"[green][x] Gateway started (PID {proc.pid}) on {url}[/]")
+        else:
+            self.console.print("[yellow]Gateway process started but not responding yet.[/]")
+        Prompt.ask("[dim]Press Enter to continue[/]", default="")
+
+    def _is_gateway_running(self, url: str) -> bool:
+        """Quick health check — returns True if gateway responds at *url*/health."""
+        if not url:
+            return False
+        try:
+            import httpx
+            r = httpx.get(f"{url.rstrip('/')}/health", timeout=2.0)
+            return r.status_code == 200
+        except Exception:
+            return False
+
     def _gateway_menu(self) -> None:
         while True:
             self.console.clear()
@@ -397,10 +460,14 @@ class ConfigManagerApp:
             if current_url is None:
                 current_url = get_config_status(self.config).get("gateway_url")
 
+            running = self._is_gateway_running(current_url) if current_url else False
+            status_str = "[green][x] Running[/]" if running else "[yellow]Stopped[/]"
+
             t = Table(box=box.ROUNDED, show_header=False)
             t.add_column("Setting", style="bold", width=20)
             t.add_column("Value")
             t.add_row("Gateway URL", current_url or "[yellow]Not set[/]")
+            t.add_row("Status", status_str)
             t.add_row("Mode", "[green]Enabled[/]" if current_url else "[dim]Disabled (direct LLM calls)[/]")
             self.console.print(t)
             self.console.print()
@@ -408,8 +475,9 @@ class ConfigManagerApp:
             self.console.print("[bold]Options:[/]")
             self.console.print("  [dim]1[/] Set gateway URL")
             self.console.print("  [dim]2[/] Clear gateway URL (disable gateway mode)")
+            self.console.print("  [dim]3[/] Start local gateway")
             self.console.print("  [dim]0[/] Back to main menu")
-            choice = Prompt.ask("Select option", choices=["0", "1", "2"], default="0")
+            choice = Prompt.ask("Select option", choices=["0", "1", "2", "3"], default="0")
             if choice == "0":
                 break
             elif choice == "1":
@@ -424,6 +492,8 @@ class ConfigManagerApp:
                 self._dirty = True
                 self.console.print("[green][x] Gateway URL cleared[/]")
                 Prompt.ask("[dim]Press Enter to continue[/]", default="")
+            elif choice == "3":
+                self._start_local_gateway()
 
     # -- Preferences menu ---------------------------------------------------
 
