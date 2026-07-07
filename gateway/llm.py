@@ -131,20 +131,30 @@ def call_llm_with_fallback(
     provider: str,
     model: str,
     request: ChatCompletionRequest,
+    upstream_api_key: str = "",
 ) -> LLMResult:
     """Call an LLM provider with automatic fallback on failure.
 
     Tries the primary provider first. If it fails, tries each secondary
     in order. Raises the last error if all fail.
+
+    Args:
+        config: Gateway configuration.
+        provider: Primary provider name.
+        model: Model name for the primary provider.
+        request: The chat completion request.
+        upstream_api_key: Optional forwarded API key from the client
+            (X-API-Key header).  When set, overrides the provider's
+            own stored key.
     """
     provider_config = config.providers.get(provider, {})
-    api_key = provider_config.get("api_key", "")
+    api_key = upstream_api_key or provider_config.get("api_key", "")
     base_url = provider_config.get("base_url", "https://api.openai.com/v1")
 
     def _attempt(prov: str, mdl: str) -> LLMResult:
         cfg = config.providers.get(prov, {})
         resp = _call_upstream(
-            api_key=cfg.get("api_key", api_key),
+            api_key=upstream_api_key or cfg.get("api_key", api_key),
             base_url=cfg.get("base_url", "https://api.openai.com/v1"),
             model=mdl,
             messages=request.messages,

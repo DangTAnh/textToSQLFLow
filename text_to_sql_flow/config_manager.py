@@ -413,11 +413,16 @@ class ConfigManagerApp:
             running = self._is_gateway_running(current_url) if current_url else False
             status_str = "[green][x] Running[/]" if running else "[yellow]Stopped[/]"
 
+            max_tokens = self.config.max_tokens if hasattr(self.config, "max_tokens") else 16384
+            temperature = self.config.temperature if hasattr(self.config, "temperature") else 0.3
+
             t = Table(box=box.ROUNDED, show_header=False)
             t.add_column("Setting", style="bold", width=20)
             t.add_column("Value")
             t.add_row("Gateway URL", current_url or "[yellow]Not set[/]")
             t.add_row("Status", status_str)
+            t.add_row("Max Tokens", str(max_tokens) if max_tokens else "[dim]Unlimited[/]")
+            t.add_row("Temperature", str(temperature))
             t.add_row("Mode", "[green]Enabled[/]" if current_url else "[dim]Disabled (direct LLM calls)[/]")
             self.console.print(t)
             self.console.print()
@@ -426,8 +431,10 @@ class ConfigManagerApp:
             self.console.print("  [dim]1[/] Set gateway URL")
             self.console.print("  [dim]2[/] Clear gateway URL (disable gateway mode)")
             self.console.print("  [dim]3[/] Start local gateway")
+            self.console.print("  [dim]4[/] Set max_tokens for LLM calls")
+            self.console.print("  [dim]5[/] Set temperature for LLM calls")
             self.console.print("  [dim]0[/] Back to main menu")
-            choice = Prompt.ask("Select option", choices=["0", "1", "2", "3"], default="0")
+            choice = Prompt.ask("Select option", choices=["0", "1", "2", "3", "4", "5"], default="0")
             if choice == "0":
                 break
             elif choice == "1":
@@ -444,6 +451,31 @@ class ConfigManagerApp:
                 Prompt.ask("[dim]Press Enter to continue[/]", default="")
             elif choice == "3":
                 self._start_local_gateway()
+            elif choice == "4":
+                raw = Prompt.ask("Max tokens (0 = no limit, empty = keep current)", default=str(max_tokens))
+                if raw.strip():
+                    try:
+                        val = int(raw)
+                        self.config.max_tokens = val if val > 0 else None
+                        self._dirty = True
+                        self.console.print(f"[green][x] max_tokens set to {val if val > 0 else 'unlimited'}[/]")
+                    except ValueError:
+                        self.console.print("[yellow]Invalid number[/]")
+                    Prompt.ask("[dim]Press Enter to continue[/]", default="")
+            elif choice == "5":
+                raw = Prompt.ask("Temperature (0.0-2.0)", default=str(temperature))
+                if raw.strip():
+                    try:
+                        val = float(raw)
+                        if 0.0 <= val <= 2.0:
+                            self.config.temperature = val
+                            self._dirty = True
+                            self.console.print(f"[green][x] Temperature set to {val}[/]")
+                        else:
+                            self.console.print("[yellow]Must be between 0.0 and 2.0[/]")
+                    except ValueError:
+                        self.console.print("[yellow]Invalid number[/]")
+                    Prompt.ask("[dim]Press Enter to continue[/]", default="")
 
     # -- Preferences menu ---------------------------------------------------
 

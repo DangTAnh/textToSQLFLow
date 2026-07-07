@@ -352,8 +352,10 @@ def _ensure_api_key(console: Console, provider: str, config: AppConfig) -> Optio
     )
     key = Prompt.ask("[bold]API key[/]", password=True)
     if key.strip():
-        console.print("[green][x][/] Key accepted for this session")
-        return AppConfig(api_key=key.strip())
+        cfg = AppConfig(api_key=key.strip())
+        _save_key_to_dotenv(provider, cfg, console)
+        console.print("[green][x][/] Key saved and accepted for this session")
+        return cfg
 
     console.print("[yellow]No key entered -- generation may fail[/]")
     return None

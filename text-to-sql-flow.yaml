@@ -1,4 +1,7 @@
-provider: opencode
+provider: claude
 temperature: 0.3
 gateway_url: http://localhost:8000
 custom_providers: {}
+max_tokens: 16384
+provider_models:
+  openai: gpt-4o

@@ -174,10 +174,13 @@ async def chat_completions(
             logger.debug("Cache hit")
             return cached.model_dump()
 
-    # 3. Route
+    # 3. Extract forwarded API key (opencode client → gateway → upstream)
+    upstream_key = request.headers.get("X-API-Key", "").strip()
+
+    # 4. Route
     provider, model = route_request(state.config, body)
 
-    # 4. Rate limit
+    # 5. Rate limit
     if state.config.rate_limit.enabled:
         allowed, retry_after = state.rate_limiter.check(provider)
         if not allowed:
@@ -188,9 +191,9 @@ async def chat_completions(
                 headers=headers,
             )
 
-    # 5. Call LLM (with fallback)
+    # 6. Call LLM (with fallback)
     try:
-        result = call_llm_with_fallback(state.config, provider, model, body)
+        result = call_llm_with_fallback(state.config, provider, model, body, upstream_api_key=upstream_key)
     except RuntimeError as e:
         _audit_log(request, provider, model, "failed", 0.0)
         raise HTTPException(status_code=502, detail=str(e))
