@@ -196,7 +196,9 @@ def parse_evaluation_response(response_text: str, threshold: float = THRESHOLD) 
         if raw_text and not raw_text.isspace() and "{" in raw_text:
             hint = (
                 " The response appears to be incomplete (truncated). "
-                "This usually means the model hit the max_tokens limit."
+                "This usually means the model hit the max_tokens limit. "
+                "Go to Configuration (2) -> Gateway (3) -> '4 Set max_tokens' "
+                "to increase it."
             )
         raise ValueError("No JSON object found in evaluator response" + hint)
 
@@ -207,7 +209,9 @@ def parse_evaluation_response(response_text: str, threshold: float = THRESHOLD) 
         if "{" in raw_text and not raw_text.rstrip().endswith("}"):
             hint = (
                 " The response appears to be incomplete (truncated). "
-                "This usually means the model hit the max_tokens limit."
+                "This usually means the model hit the max_tokens limit. "
+                "Go to Configuration (2) -> Gateway (3) -> '4 Set max_tokens' "
+                "to increase it."
             )
         raise ValueError(f"Failed to parse evaluator JSON response: {e}{hint}")
 
