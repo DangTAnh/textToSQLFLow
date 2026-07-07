@@ -90,15 +90,16 @@ def interactive_session() -> None:
         menu.add_row("[bold cyan]1[/]", "Generate flow", "Enter description(s) and generate ETL flows")
         menu.add_row("[bold cyan]2[/]", "Configuration", "Manage providers, API keys, gateway, preferences")
         gateway_url = getattr(config, "gateway_url", None)
-        gw = f"[green][x] {gateway_url}[/]" if gateway_url else "[yellow]direct[/]"
-        menu.add_row("", "Gateway", f"Current: {gw}")
+        gw_status = _gateway_status(gateway_url)
+        menu.add_row("[bold cyan]3[/]", "Start local gateway", f"Launch AI GATEWAY on localhost:8000")
+        menu.add_row("", "Gateway", f"{gw_status}")
         menu.add_row("[bold cyan]0[/]", "Exit", "Back to shell")
         console.print(menu)
         console.print()
 
         choice = Prompt.ask(
             "[bold]Select option[/]",
-            choices=["0", "1", "2"],
+            choices=["0", "1", "2", "3"],
             default="1",
         )
 
@@ -113,6 +114,11 @@ def interactive_session() -> None:
             Prompt.ask("[dim]Press Enter to continue[/]", default="")
             console.clear()
             _render_welcome(console, config)
+            continue
+
+        if choice == "3":
+            from text_to_sql_flow.config_manager import start_local_gateway
+            start_local_gateway(console)
             continue
 
         # choice == "1" — Generate flow
@@ -187,6 +193,19 @@ def _load_session_config(console: Console) -> AppConfig:
         return cfg
     except Exception:
         return AppConfig()
+
+
+# ── Gateway helpers ─────────────────────────────────────────────────────
+
+def _gateway_status(gateway_url: Optional[str]) -> str:
+    """Return a coloured gateway status string for the menu table."""
+    from text_to_sql_flow.config_manager import is_gateway_running
+    if not gateway_url:
+        return "[yellow]direct (no URL set)[/]"
+    running = is_gateway_running(gateway_url)
+    if running:
+        return f"[green][x] {gateway_url} (running)[/]"
+    return f"[yellow]{gateway_url} (stopped)[/]"
 
 
 # ── Welcome ─────────────────────────────────────────────────────────────
