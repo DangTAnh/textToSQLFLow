@@ -44,7 +44,11 @@ PASS_MINIMUMS: dict[str, float] = {
 
 EVALUATOR_SYSTEM_PROMPT = """You are a senior data engineer evaluating a Spark SQL ETL flow definition.
 
-Evaluate the flow JSON on these 8 dimensions, each scored 1-10:
+Evaluate the generated Spark SQL ETL flow strictly against the original
+business description. Do not assume missing information. Only award high
+scores when the optimization or correctness is explicitly present in the flow.
+
+Evaluate on these 8 dimensions, each scored 1-10:
 
 1. **correctness** — SQL syntax correctness, proper Spark SQL functions,
    no logical errors or column mismatches.
@@ -101,8 +105,9 @@ Respond with ONLY valid JSON in this exact shape (no extra text):
 }
 
 List any blocking defect in **critical_issues** — a SQL syntax error, a missing
-column, a wrong join key, a circular dependency, an unsupported Spark function.
-Leave the list empty when no blocking issues exist.
+column, a wrong join key, a circular dependency, an unsupported Spark function,
+or a business logic contradiction (e.g. business says "inactive 180 days" but
+flow uses 90 days). Leave the list empty when no blocking issues exist.
 
 Pass gate: overall >= 8.5 AND correctness >= 8 AND
 spark_execution_efficiency >= 8 AND dependency_correctness >= 8
@@ -133,19 +138,25 @@ class EvaluationResult(BaseModel):
 # ── Public API ────────────────────────────────────────────────────────────
 
 
-def build_evaluation_prompt(flow_dict: dict) -> tuple[str, str]:
+def build_evaluation_prompt(flow_dict: dict, description: Optional[str] = None) -> tuple[str, str]:
     """Build (system_prompt, user_prompt) pair for the evaluator LLM call.
 
     Args:
         flow_dict: The generated flow as a plain dict (from Flow.to_serializable_dict).
+        description: Optional original business description to evaluate against.
 
     Returns:
         A tuple of (system_prompt, user_prompt) strings.
     """
     user_prompt = (
-        "Evaluate the following Spark SQL ETL flow:\n\n"
+        f"Evaluate the following Spark SQL ETL flow:\n\n"
         f"```json\n{json.dumps(flow_dict, indent=2)}\n```"
     )
+    if description:
+        user_prompt += (
+            f"\n\nOriginal business description (use to verify correctness and "
+            f"completeness):\n\n{description}"
+        )
     return EVALUATOR_SYSTEM_PROMPT, user_prompt
 
 
@@ -202,7 +213,7 @@ def parse_evaluation_response(response_text: str, threshold: float = THRESHOLD) 
         float(score) >= threshold
         and len(critical_issues) == 0
         and all(
-            dimensions.get(dim, 10) >= min_score
+            dimensions.get(dim, 0) >= min_score
             for dim, min_score in PASS_MINIMUMS.items()
         )
     )
@@ -220,6 +231,7 @@ def evaluate_flow(
     provider: str = "opencode",
     config: Optional[AppConfig] = None,
     threshold: float = THRESHOLD,
+    description: Optional[str] = None,
 ) -> EvaluationResult:
     """Evaluate a generated flow JSON file using the LLM evaluator.
 
@@ -228,6 +240,7 @@ def evaluate_flow(
         provider: LLM provider name (defaults to "openai").
         config: Optional AppConfig for model/temperature overrides.
         threshold: Score threshold for passing (defaults to THRESHOLD constant).
+        description: Original business description for correctness check.
 
     Returns:
         An EvaluationResult with score, feedback, and pass/fail status.
@@ -243,6 +256,6 @@ def evaluate_flow(
     with open(flow_path, "r", encoding="utf-8") as f:
         flow_dict = json.load(f)
 
-    system_prompt, user_prompt = build_evaluation_prompt(flow_dict)
+    system_prompt, user_prompt = build_evaluation_prompt(flow_dict, description=description)
     response_text = call_llm(system_prompt, user_prompt, provider=provider, config=config)
     return parse_evaluation_response(response_text, threshold=threshold)
