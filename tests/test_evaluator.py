@@ -99,6 +99,7 @@ class TestParseEvaluationResponse:
                 "spark_execution_efficiency": 9,
                 "dependency_correctness": 9,
             },
+            "critical_issues": [],
             "feedback": "Correctness is borderline",
         })
         result = parse_evaluation_response(resp)
@@ -114,11 +115,28 @@ class TestParseEvaluationResponse:
                 "spark_execution_efficiency": 8,
                 "dependency_correctness": 9,
             },
+            "critical_issues": [],
             "feedback": "Meets minimum requirements",
         })
         result = parse_evaluation_response(resp)
         assert result.score == 8.5
         assert result.passed is True
+
+    def test_parse_fails_when_critical_issues_present(self):
+        """Non-empty critical_issues → passed=False even with good scores."""
+        resp = json.dumps({
+            "score": 9.5,
+            "dimensions": {
+                "correctness": 9,
+                "spark_execution_efficiency": 9,
+                "dependency_correctness": 9,
+            },
+            "critical_issues": ["column revenue is missing from upstream"],
+            "feedback": "Missing column",
+        })
+        result = parse_evaluation_response(resp)
+        assert result.score == 9.5
+        assert result.passed is False
 
 
 class TestEvaluateFlow:

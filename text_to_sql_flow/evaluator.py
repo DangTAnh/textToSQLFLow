@@ -94,13 +94,20 @@ Respond with ONLY valid JSON in this exact shape (no extra text):
         "dependency_correctness": 9,
         "code_quality": 8
     },
-    "critical_issues": [],
+    "critical_issues": [
+        "column 'revenue' is missing from upstream view before aggregation"
+    ],
     "feedback": "The flow covers the main requirements but ...",
     "confidence": 0.91
 }
 
+List any blocking defect in **critical_issues** — a SQL syntax error, a missing
+column, a wrong join key, a circular dependency, an unsupported Spark function.
+Leave the list empty when no blocking issues exist.
+
 Pass gate: overall >= 8.5 AND correctness >= 8 AND
-spark_execution_efficiency >= 8 AND dependency_correctness >= 8.
+spark_execution_efficiency >= 8 AND dependency_correctness >= 8
+AND no critical_issues.
 """
 
 # ── Models ────────────────────────────────────────────────────────────────
@@ -199,6 +206,7 @@ def parse_evaluation_response(response_text: str, threshold: float = THRESHOLD) 
         confidence = float(confidence)
     passed = (
         float(score) >= threshold
+        and len(critical_issues) == 0
         and all(
             dimensions.get(dim, 10) >= min_score
             for dim, min_score in PASS_MINIMUMS.items()
