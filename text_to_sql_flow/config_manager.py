@@ -413,7 +413,7 @@ class ConfigManagerApp:
             if choice == "0":
                 break
             elif choice == "1":
-                url = Prompt.ask("Gateway URL", default="http://localhost:8000")
+                url = Prompt.ask("Gateway URL (empty to cancel)")
                 if url.strip():
                     self.config.gateway_url = url.strip()
                     self._dirty = True
