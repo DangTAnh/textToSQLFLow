@@ -8,38 +8,26 @@ CLI tool sinh luồng Spark SQL dạng JSON từ mô tả nghiệp vụ bằng L
 
 Data engineer có thể đưa mô tả nghiệp vụ và nhận luồng SQL Spark sẵn sàng chạy, không cần tự viết từng câu SQL.
 
-## Current Milestone: v1.2 — Table Metadata, DAG Optimization & AI Gateway
+## Current Milestone: v1.3 — Cải tiến GUI (Terminal UI)
 
-**Goal:** Kết hợp mô tả nghiệp vụ + thông tin mô tả các bảng để sinh luồng SQL chính xác hơn, tối ưu song song, tích hợp AI GATEWAY tập trung.
+**Goal:** Data engineer có thể quản lý cấu hình và tương tác với tool qua terminal UI trực quan, không cần nhớ CLI flags.
 
 **Target features:**
-- Input mở rộng: nhận table metadata (JSON schema + DDL) kết hợp với business description
-- DAG Optimizer: phân tích dependency graph, tối đa parallel execution nodes
-- AI GATEWAY: standalone FastAPI service — routing, fallback, cost tracking, rate limit, caching, audit, RBAC
-- Tool gọi Gateway thay vì LLM trực tiếp
+- Interactive Config Manager: menu-driven TUI để quản lý provider, API key, gateway, preferences
+- Enhanced Interactive REPL: multi-description input, provider search, progress visualization, session history
+- Lưu cấu hình qua YAML + .env files tự động
 
 ## Requirements
 
-### Validated ✅ (v1.0)
+### Validated ✅ (v1.0 + v1.1 + v1.2)
 
-- **LLM-01**: Người dùng nhập mô tả nghiệp vụ dạng inline (CLI argument) — ✅
-- **LLM-02**: Gọi LLM sinh luồng SQL dạng JSON dựa trên mô tả — ✅
-- **LLM-03**: Hỗ trợ nhiều LLM provider: OpenAI, Claude, Deepseek, NVIDIA NIM, OpenRouter, OpenCode — ✅
-- **LLM-04**: Cấu hình provider qua CLI flag hoặc config file — ✅
-- **EVAL-01**: Đánh giá luồng SQL bằng LLM (chất lượng, đúng nghiệp vụ) — ✅
-- **EVAL-02**: Tuning luồng dựa trên kết quả đánh giá — ✅
-- **EVAL-03**: Loop: nếu chưa OK thì quay lại bước đánh giá — ✅
-- **EVAL-04**: Hỗ trợ mode --auto và --interactive — ✅
-- **OUT-01**: Xuất kết quả ra file JSON chứa cấu trúc luồng — ✅
-- **OUT-02**: Xuất HTML report có sơ đồ luồng và bảng đánh giá — ✅
+Toàn bộ 41 requirements từ v1.0-v1.2 đã hoàn thành. Xem `.planning/REQUIREMENTS.md` và `.planning/ROADMAP.md`.
 
 ### Active
 
-- [ ] **GUI-01**: CLI interactive mode cho phép nhập nhiều mô tả nghiệp vụ
-- [ ] **GUI-02**: Giao diện chọn provider (danh sách tương tác)
-- [ ] **GUI-03**: Form nhập API key inline nếu provider chưa có key
-- [ ] **CFG-01**: Load API key từ `.env` file
-- [ ] **CFG-02**: Default provider = opencode/deepseek-v4-flash-free
+- [ ] **CFG-01 → CFG-07**: Interactive Config Manager (Phase 11)
+- [ ] **REPL-01 → REPL-06**: Enhanced Interactive REPL (Phase 12)
+- [ ] **POL-01 → POL-04**: Polish & Integration (Phase 13)
 
 ### Out of Scope
 
@@ -54,6 +42,8 @@ Data engineer có thể đưa mô tả nghiệp vụ và nhận luồng SQL Spar
 - Dùng Python với thư viện phổ biến (không LangChain/LangGraph)
 - Input format mẫu dựa trên cấu trúc JSON tại sample.txt
 - Môi trường Windows 11
+- **v1.2 complete**: 145 tests, 22 requirements, 4 phases
+- **v1.3 starting**: Terminal UI improvements — config manager (Phase 11) first
 
 ## Constraints
 
@@ -89,4 +79,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-01 after milestone v1.1 initialization*
+*Last updated: 2026-07-07 after milestone v1.3 initialization*
