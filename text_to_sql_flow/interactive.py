@@ -117,8 +117,13 @@ def interactive_session() -> None:
             continue
 
         if choice == "3":
-            from text_to_sql_flow.config_manager import start_local_gateway
+            from text_to_sql_flow.config_manager import start_local_gateway, is_gateway_running
             start_local_gateway(console)
+            # If gateway is now running, auto-configure the URL
+            if not config.gateway_url and is_gateway_running("http://localhost:8000"):
+                config.gateway_url = "http://localhost:8000"
+                from text_to_sql_flow.config import write_config
+                write_config(config)
             continue
 
         # choice == "1" — Generate flow
@@ -201,6 +206,9 @@ def _gateway_status(gateway_url: Optional[str]) -> str:
     """Return a coloured gateway status string for the menu table."""
     from text_to_sql_flow.config_manager import is_gateway_running
     if not gateway_url:
+        # Probe default port — maybe started manually or by earlier option 3
+        if is_gateway_running("http://localhost:8000"):
+            return "[green][x] localhost:8000 (running, no URL set)[/]"
         return "[yellow]direct (no URL set)[/]"
     running = is_gateway_running(gateway_url)
     if running:
