@@ -224,7 +224,7 @@ def run_evaluation_loop(
 
         # Step 2: Evaluate
         try:
-            result = evaluate_flow(flow_path, provider=active_provider, config=config, threshold=threshold)
+            result = evaluate_flow(flow_path, provider=active_provider, config=config, threshold=threshold, description=current_description)
         except Exception as e:
             logger.error("Evaluation failed: %s", e)
             if iteration == MAX_ITERATIONS:
