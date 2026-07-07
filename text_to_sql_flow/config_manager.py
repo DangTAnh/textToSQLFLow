@@ -180,8 +180,6 @@ class ConfigManagerApp:
                 self._preferences_menu()
             elif choice == "5":
                 self._config_file_menu()
-            elif choice == "6":
-                self._dotenv_menu()
 
         if self._dirty:
             write_config(self.config)
@@ -213,16 +211,15 @@ class ConfigManagerApp:
         total_keys = len(status["keys"])
 
         table.add_row("1", "Providers", f"Default: [bold]{default_prov}[/] -- {key_count}/{total_keys} keys set")
-        table.add_row("2", "API Keys", "View status, set/update/delete, test connectivity")
+        table.add_row("2", "API Keys", "View, set, test, delete API keys (saves to .env)")
         table.add_row("3", "Gateway", f"{'[green][x] Configured[/]' if status['gateway_url'] else '[yellow]Not set[/]'}")
         table.add_row("4", "Preferences", "Threshold, auto/interactive mode, optimize flag")
         table.add_row("5", "Config File", f"View, save, load from {DEFAULT_CONFIG_PATH.name}")
-        table.add_row("6", ".env File", f"View, add/edit/delete keys in {DEFAULT_DOTENV_PATH.name}")
         table.add_row("0", "Exit", "Save and quit")
 
         self.console.print(table)
         self.console.print()
-        return Prompt.ask("[bold]Select option[/]", choices=["0", "1", "2", "3", "4", "5", "6"], default="0")
+        return Prompt.ask("[bold]Select option[/]", choices=["0", "1", "2", "3", "4", "5"], default="0")
 
     # -- Provider menu ------------------------------------------------------
 
@@ -310,33 +307,39 @@ class ConfigManagerApp:
 
             providers = self._get_providers()
             status = get_config_status(self.config)
+            dotenv = load_dotenv(force=True)
             t = Table(box=box.ROUNDED, header_style="bold cyan")
             t.add_column("#", width=3)
             t.add_column("Provider", width=14)
             t.add_column("Env Var", width=22)
-            t.add_column("Status", width=16)
+            t.add_column("Status", width=12)
+            t.add_column("Value")
             for i, name in enumerate(providers, 1):
                 env_var = self._get_env_var(name)
                 key_ok = status["keys"].get(name, False)
-                t.add_row(
-                    str(i), name, env_var,
-                    "[green][x] Key set[/]" if key_ok else "[red][ ] Missing[/]",
-                )
+                val = dotenv.get(env_var, "")
+                masked = val[:8] + "..." + val[-4:] if len(val) > 16 else (val[:4] + "..." if val else "")
+                status_str = "[green][x] Set[/]" if key_ok else "[red]Missing[/]"
+                t.add_row(str(i), name, env_var, status_str, masked if val else "[dim]--[/]")
             self.console.print(t)
             self.console.print()
 
             max_idx = len(providers)
             self.console.print("[bold]Options:[/]")
             self.console.print(f"  [dim]1-{max_idx}[/] Set/update API key for a provider")
+            self.console.print("  [dim]d[/] Delete an API key")
             self.console.print("  [dim]t[/] Test API key connectivity")
             self.console.print("  [dim]0[/] Back to main menu")
-            choices = [str(i) for i in range(max_idx + 1)] + ["t", "T", "0"]
+            choices = [str(i) for i in range(max_idx + 1)] + ["d", "D", "t", "T", "0"]
             choice = Prompt.ask("Select option", choices=choices, default="0")
 
             if choice == "0":
                 break
             if choice.lower() == "t":
                 self._test_key_connectivity()
+                continue
+            if choice.lower() == "d":
+                self._delete_api_key()
                 continue
             idx = int(choice) - 1
             if 0 <= idx < max_idx:
@@ -583,57 +586,9 @@ class ConfigManagerApp:
                     self.console.print(f"[red]Failed to load config: {e}[/]")
                 Prompt.ask("[dim]Press Enter to continue[/]", default="")
 
-    # -- .env menu ----------------------------------------------------------
+    # -- API key delete ----------------------------------------------------
 
-    def _dotenv_menu(self) -> None:
-        while True:
-            self.console.clear()
-            self.console.print(Panel("[bold].env File Management[/]", border_style="cyan"))
-            self.console.print()
-
-            providers = self._get_providers()
-            dotenv = load_dotenv()
-
-            t = Table(box=box.ROUNDED, header_style="bold cyan")
-            t.add_column("#", width=3)
-            t.add_column("Provider", width=14)
-            t.add_column("Env Var", width=22)
-            t.add_column("Status", width=12)
-            t.add_column("Value")
-            for i, name in enumerate(providers, 1):
-                env_var = self._get_env_var(name)
-                val = dotenv.get(env_var, "")
-                masked = val[:8] + "..." + val[-4:] if len(val) > 16 else (val[:4] + "..." if val else "")
-                status_str = "[green][x] Set[/]" if val else "[red]Missing[/]"
-                t.add_row(str(i), name, env_var, status_str, masked if val else "[dim]--[/]")
-            self.console.print(t)
-            self.console.print()
-
-            max_idx = len(providers)
-            self.console.print("[bold]Options:[/]")
-            self.console.print(f"  [dim]1-{max_idx}[/] Add/edit API key in .env")
-            self.console.print("  [dim]d[/] Delete an API key from .env")
-            self.console.print("  [dim]0[/] Back to main menu")
-            choices = [str(i) for i in range(max_idx + 1)] + ["d", "D", "0"]
-            choice = Prompt.ask("Select option", choices=choices, default="0")
-            if choice == "0":
-                break
-            if choice.lower() == "d":
-                self._dotenv_delete_key()
-                continue
-            idx = int(choice) - 1
-            if 0 <= idx < max_idx:
-                provider = providers[idx]
-                env_var = self._get_env_var(provider)
-                self.console.print(f"\nEnter API key for [bold]{provider}[/] ({env_var}):")
-                key = Prompt.ask("API key", password=True)
-                if key.strip():
-                    write_dotenv_key(provider, key.strip(), env_var=env_var)
-                    self.console.print(f"[green][x] {env_var} saved[/]")
-                    self._dirty = True
-                    Prompt.ask("[dim]Press Enter to continue[/]", default="")
-
-    def _dotenv_delete_key(self) -> None:
+    def _delete_api_key(self) -> None:
         providers = self._get_providers()
         self.console.print()
         self.console.print("[bold]Delete API Key[/]")
