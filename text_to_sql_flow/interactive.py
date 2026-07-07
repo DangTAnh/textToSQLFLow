@@ -110,6 +110,7 @@ def interactive_session() -> None:
             config = _load_session_config(console)
             console.print("[green][x] Config reloaded[/]")
             Prompt.ask("[dim]Press Enter to continue[/]", default="")
+            console.clear()
             _render_welcome(console, config)
             continue
 
