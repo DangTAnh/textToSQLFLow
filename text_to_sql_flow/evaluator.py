@@ -97,8 +97,7 @@ Respond with ONLY valid JSON in this exact shape (no extra text):
     "critical_issues": [
         "column 'revenue' is missing from upstream view before aggregation"
     ],
-    "feedback": "The flow covers the main requirements but ...",
-    "confidence": 0.91
+    "feedback": "The flow covers the main requirements but ..."
 }
 
 List any blocking defect in **critical_issues** — a SQL syntax error, a missing
@@ -122,7 +121,6 @@ class EvaluationResult(BaseModel):
         dimensions: Per-dimension scores (correctness, completeness, …).
         critical_issues: List of blocking issues (from LLM).
         feedback: Detailed feedback text from the LLM evaluator.
-        confidence: LLM's confidence level 0-1 (from LLM).
     """
 
     score: float
@@ -130,7 +128,6 @@ class EvaluationResult(BaseModel):
     dimensions: dict[str, float]
     passed: bool
     critical_issues: list[str] = []
-    confidence: Optional[float] = None
 
 
 # ── Public API ────────────────────────────────────────────────────────────
@@ -201,9 +198,6 @@ def parse_evaluation_response(response_text: str, threshold: float = THRESHOLD) 
 
     dimensions = data.get("dimensions", {})
     critical_issues = data.get("critical_issues", [])
-    confidence = data.get("confidence")
-    if confidence is not None:
-        confidence = float(confidence)
     passed = (
         float(score) >= threshold
         and len(critical_issues) == 0
@@ -218,7 +212,6 @@ def parse_evaluation_response(response_text: str, threshold: float = THRESHOLD) 
         dimensions=dimensions,
         passed=passed,
         critical_issues=critical_issues,
-        confidence=confidence,
     )
 
 
