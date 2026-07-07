@@ -90,15 +90,15 @@ def _parse_dotenv(path: Path) -> dict[str, str]:
     return result
 
 
-def load_dotenv(path: Optional[Path] = None) -> dict[str, str]:
+def load_dotenv(path: Optional[Path] = None, force: bool = False) -> dict[str, str]:
     """Load ``.env`` file and return ``{KEY: VALUE}``.
 
     If *path* is ``None``, defaults to ``./.env`` in the current working
     directory.  The result is cached module-wide so the file is read only
-    once per process.
+    once per process (pass *force=True* to bypass the cache).
     """
     global _dotenv_values, _dotenv_loaded
-    if not _dotenv_loaded:
+    if force or not _dotenv_loaded:
         _dotenv_values = _parse_dotenv(path or DEFAULT_DOTENV_PATH)
         _dotenv_loaded = True
         count = len(_dotenv_values)
