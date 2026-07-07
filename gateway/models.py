@@ -15,7 +15,7 @@ class ChatCompletionRequest(BaseModel):
     model: str = "gpt-4o"
     messages: list[Message]
     temperature: float = 0.7
-    max_tokens: int = 4096
+    max_tokens: Optional[int] = None  # None = upstream default (unlimited)
     stream: bool = False
     model_name: Optional[str] = None  # resolved model name (TextToSQLFlow extension)
 

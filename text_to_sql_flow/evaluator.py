@@ -192,12 +192,24 @@ def parse_evaluation_response(response_text: str, threshold: float = THRESHOLD) 
     if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
         json_str = json_str[first_brace: last_brace + 1]
     else:
-        raise ValueError("No JSON object found in evaluator response")
+        hint = ""
+        if raw_text and not raw_text.isspace() and "{" in raw_text:
+            hint = (
+                " The response appears to be incomplete (truncated). "
+                "This usually means the model hit the max_tokens limit."
+            )
+        raise ValueError("No JSON object found in evaluator response" + hint)
 
     try:
         data: dict = json.loads(json_str)
     except json.JSONDecodeError as e:
-        raise ValueError(f"Failed to parse evaluator JSON response: {e}")
+        hint = ""
+        if "{" in raw_text and not raw_text.rstrip().endswith("}"):
+            hint = (
+                " The response appears to be incomplete (truncated). "
+                "This usually means the model hit the max_tokens limit."
+            )
+        raise ValueError(f"Failed to parse evaluator JSON response: {e}{hint}")
 
     score = data.get("score")
     feedback = data.get("feedback")
