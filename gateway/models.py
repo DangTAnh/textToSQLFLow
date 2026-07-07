@@ -17,6 +17,7 @@ class ChatCompletionRequest(BaseModel):
     temperature: float = 0.7
     max_tokens: int = 4096
     stream: bool = False
+    model_name: Optional[str] = None  # resolved model name (TextToSQLFlow extension)
 
 
 class Choice(BaseModel):
