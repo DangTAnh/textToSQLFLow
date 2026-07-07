@@ -25,12 +25,14 @@ python -m text_to_sql_flow batch descriptions.txt
 
 | Tính năng | Mô tả |
 |-----------|-------|
-| **3 CLI modes** | `generate`, `interactive` (REPL), `batch` (file) |
+| **4 CLI modes** | `generate`, `interactive` (REPL), `batch` (file), `config` (TUI) |
 | **6 LLM providers** | OpenAI, Claude, DeepSeek, NVIDIA NIM, OpenRouter, OpenCode |
 | **Auto evaluation** | 5-dim rubric, score ≥ 7.0 (default), tuning loop (max 5 lần) |
 | **Table Metadata** | Cung cấp schema JSON hoặc DDL → LLM sinh flow chính xác hơn |
 | **DAG Optimizer** | Tự động tối ưu thứ tự chạy cho parallel execution tối đa |
 | **AI GATEWAY** | Standalone proxy service: routing, fallback, rate limit, cache, audit, RBAC |
+| **Config Manager** | Interactive TUI: quản lý provider, API key, gateway, preferences (v1.3) |
+| **Enhanced REPL** | Multi-description input, provider search, progress viz, session history (v1.3) |
 | **HTML report** | Jinja2 template, dark theme |
 | **Pydantic validation** | Schema validation cho flow JSON |
 | **OpenCode default** | Model free, cần OPENCODE\_API\_KEY |
@@ -66,6 +68,36 @@ python -m text_to_sql_flow generate "Mô tả" --optimize
 
 # Tắt optimizer (passthrough raw LLM output)
 python -m text_to_sql_flow generate "Mô tả" --no-optimize
+```
+
+### Config Manager (v1.3)
+
+```bash
+# Launch interactive config manager TUI
+text-to-sql-flow config
+
+# Menu sections:
+# 1. Providers  — xem, set default provider
+# 2. API Keys   — CRUD API keys, test connectivity
+# 3. Gateway    — cấu hình URL, enable/disable gateway mode
+# 4. Preferences — threshold, auto/interactive, optimize flag
+# 5. Config File — save/load YAML config
+# 6. .env File  — view, add/edit/delete API keys in .env
+```
+
+### Enhanced Interactive REPL (v1.3)
+
+```bash
+# Interactive mode với đầy đủ tính năng
+text-to-sql-flow interactive
+
+# Tính năng mới:
+# - Multi-description: nhập nhiều mô tả cùng lúc
+# - Provider search: gõ để lọc provider
+# - Config-aware: tự động dùng config từ config manager
+# - Progress bars: hiển thị từng bước generation
+# - Session history: tự động lưu vào ~/.text-to-sql-flow/history/
+# - Error suggestions: gợi ý khắc phục lỗi (API key, network, gateway)
 ```
 
 ### AI GATEWAY (v1.2)
