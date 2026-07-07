@@ -1,5 +1,4 @@
 """LLM provider calling — routing, fallback, cost estimation."""
-
 import logging
 import re
 import time
@@ -22,12 +21,21 @@ def route_request(
 ) -> tuple[str, str]:
     """Match the request against routing rules.
 
-    Uses the first user message's content for pattern matching.
-    Falls back to the first configured provider + model if no rule matches.
+    Priority:
+    1. If *request.model* names a configured provider, use it directly.
+    2. Match the first user message's content against routing patterns.
+    3. Fall back to the first configured provider.
 
     Returns:
         ``(provider_name, model_name)``
     """
+    # 1. Model field names a configured provider directly
+    if request.model in config.providers:
+        mdl = request.model_name or config.providers[request.model].get("model", request.model)
+        logger.debug("Routed to %s/%s via model field", request.model, mdl)
+        return request.model, mdl
+
+    # 2. Content-based routing rules
     prompt_text = ""
     for msg in request.messages:
         if msg.role == "user":
@@ -39,9 +47,9 @@ def route_request(
             logger.debug("Routed to %s/%s (pattern=%s)", rule.provider, rule.model, rule.pattern)
             return rule.provider, rule.model
 
-    # Default: first configured provider
+    # 3. Default: first configured provider
     default_provider = next(iter(config.providers.keys()), "opencode")
-    default_model = request.model
+    default_model = request.model if request.model else "gpt-4o"
     logger.debug("No routing match, using default %s/%s", default_provider, default_model)
     return default_provider, default_model
 

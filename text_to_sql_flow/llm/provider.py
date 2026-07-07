@@ -58,8 +58,10 @@ def call_llm_via_gateway(
         The response text content.
     """
     url = f"{gateway_url.rstrip('/')}/v1/chat/completions"
+    model_name = PROVIDER_MODEL_MAP.get(provider, provider)
     body = {
         "model": provider,
+        "model_name": model_name,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
