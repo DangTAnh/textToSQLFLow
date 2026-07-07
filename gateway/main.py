@@ -115,12 +115,12 @@ def _check_rbac(request: Request) -> Optional[str]:
     if not api_key:
         api_key = request.headers.get("X-API-Key", "")
 
-    if not api_key and state.config.rbac:
-        raise HTTPException(status_code=401, detail="Missing API key")
-
-    allowed = state.config.rbac.get(api_key, [])
-    if not allowed and api_key:
-        raise HTTPException(status_code=403, detail="Invalid API key")
+    if state.config.rbac:
+        if not api_key:
+            raise HTTPException(status_code=401, detail="Missing API key")
+        allowed = state.config.rbac.get(api_key, [])
+        if not allowed:
+            raise HTTPException(status_code=403, detail="Invalid API key")
     return None
 
 
