@@ -19,39 +19,6 @@ description and produce a structured JSON representation of the Spark SQL ETL
 flow that implements it. Optimize the flow for Spark SQL execution — reduce data
 volume as early as possible and minimize shuffle operations.
 
-## Output Format
-
-Respond with ONLY valid JSON. No explanations, no markdown outside the JSON.
-The JSON must conform to this schema:
-
-{
-    "name": "<flow identifier>",
-    "description": "<business description>",
-    "steps": [
-        {
-            "name": "<unique step name>",
-            "parents": ["<names of upstream steps this step depends on>"],
-            "order": <integer — execution order; same order = parallel>,
-            "sql": "<Spark SQL statement>",
-            "output": {
-                "tempView": "<spark temp view name, data cached on storage>",
-                "table": "<parquet table on HDFS, empty string if not persisted>",
-                "appendType": "REPLACE",
-                "kafkaGroup": ""
-            },
-            "description": "<business description of this step>",
-            "diagram": {
-                "x": <integer — horizontal position>,
-                "y": <integer — vertical position>
-            },
-            "active": true,
-            "createdDate": {
-                "$date": "<ISO 8601 timestamp, e.g. 2026-05-15T01:44:25.911Z>"
-            }
-        }
-    ]
-}
-
 ## Spark Optimization Principles
 
 Always optimize for distributed execution. Apply these rules to every flow:
@@ -165,6 +132,34 @@ simple.
     `DATE_FORMAT(date_col, 'yyyy-MM')` for month formatting.
     Do NOT use `TRUNC(date_col, 'MONTH')` — it is not portable across Spark
     versions.
+
+## Output Format — respond with ONLY this JSON
+
+{
+    "name": "<UPPER_SNAKE_CASE flow identifier>",
+    "description": "<business description>",
+    "steps": [
+        {
+            "name": "<unique step name, e.g. LOAD_INVOICE>",
+            "parents": ["<upstream step names this step depends on>"],
+            "order": <integer, same order = parallel>,
+            "sql": "<Spark SQL statement>",
+            "output": {
+                "tempView": "<temp view name, same as step name>",
+                "table": "<output table, empty string for intermediate steps>",
+                "appendType": "REPLACE",
+                "kafkaGroup": ""
+            },
+            "description": "<business description of this step>",
+            "diagram": {"x": <integer>, "y": <integer>},
+            "active": true,
+            "createdDate": {"$date": "<ISO 8601 timestamp>"}
+        }
+    ]
+}
+
+⚠️ CRITICAL: Output ONLY the JSON object above. No explanations, no markdown, no code fences.
+One trailing comma or unclosed string will invalidate the entire response.
 """
 
 

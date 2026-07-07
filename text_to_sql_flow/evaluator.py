@@ -50,8 +50,8 @@ scores when the optimization or correctness is explicitly present in the flow.
 
 Evaluate on these 8 dimensions, each scored 1-10:
 
-1. **correctness** — SQL syntax correctness, proper Spark SQL functions,
-   no logical errors or column mismatches.
+1. **correctness** — SQL syntax, business logic correctness,
+   Spark SQL semantics, and column lineage.
 
 2. **completeness** — All required steps from the business description
    are covered, intermediate transformations exist.
