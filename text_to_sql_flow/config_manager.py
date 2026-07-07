@@ -81,31 +81,45 @@ def start_local_gateway(console: Console) -> None:
         return
 
     from rich.progress import Progress, SpinnerColumn, TextColumn
+    import tempfile
+
+    err_file = tempfile.NamedTemporaryFile(mode="w+", suffix=".log", delete=False, encoding="utf-8")
+    err_path = err_file.name
 
     with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as p:
-        task = p.add_task(f"[cyan]Starting gateway on {url}...  (0/10)", total=None)
+        task = p.add_task(f"[cyan]Starting gateway on {url}...  (0/15)", total=None)
         try:
             proc = subprocess.Popen(
                 [sys.executable, "-m", "gateway.main"],
                 stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stderr=err_file,
             )
         except FileNotFoundError:
+            err_file.close()
             console.print("[red]Failed to start gateway — gateway.main not found[/]")
             return
 
         started = False
-        for attempt in range(10):
+        for attempt in range(15):
             time.sleep(0.5)
             if is_gateway_running(url):
                 started = True
                 break
-            p.update(task, description=f"[cyan]Starting gateway on {url}... ({attempt + 1}/10)")
+            p.update(task, description=f"[cyan]Starting gateway on {url}... ({attempt + 1}/15)")
 
+    err_file.close()
     if started:
         console.print(f"[green][x] Gateway started (PID {proc.pid}) on {url}[/]")
     else:
-        console.print("[yellow]Gateway process started but not responding yet.[/]")
+        err_text = Path(err_path).read_text(encoding="utf-8").strip()
+        if err_text:
+            # Pick last meaningful lines
+            lines = [l for l in err_text.splitlines() if l.strip()]
+            details = "\n".join(lines[-5:]) if len(lines) > 5 else "\n".join(lines)
+            console.print(f"[red]Gateway failed to start[/]\n[dim]{details}[/]")
+        else:
+            console.print("[yellow]Gateway process started but not responding yet. Check logs.[/]")
+    Path(err_path).unlink(missing_ok=True)
 
 
 class ConfigManagerApp:
