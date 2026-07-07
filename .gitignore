@@ -21,8 +21,9 @@ env/
 Thumbs.db
 
 # Temp output
-./output/
+output/
 tmp_test/
 .claude/
-.claude/
-.claude/
+
+# Gateway
+gateway_audit.log

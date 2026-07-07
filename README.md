@@ -7,8 +7,13 @@ Data engineer đưa mô tả nghiệp vụ + thông tin bảng → nhận luồn
 ## Quick Start
 
 ```bash
+# Cài dependencies
+pip install -r requirements.txt
+
+# Cài local package
 pip install -e .
-# hoặc
+
+# hoặc dùng uv
 uv sync
 
 # Gen một flow (mặc định dùng OpenCode - model free, cần OPENCODE_API_KEY)
@@ -27,7 +32,7 @@ python -m text_to_sql_flow batch descriptions.txt
 |-----------|-------|
 | **4 CLI modes** | `generate`, `interactive` (REPL), `batch` (file), `config` (TUI) |
 | **6 LLM providers** | OpenAI, Claude, DeepSeek, NVIDIA NIM, OpenRouter, OpenCode |
-| **Auto evaluation** | 5-dim rubric, score ≥ 7.0 (default), tuning loop (max 5 lần) |
+| **Auto evaluation** | 8-dim rubric, score ≥ 8.5 (default), per-dimension minimums, tuning loop (max 5 lần) |
 | **Table Metadata** | Cung cấp schema JSON hoặc DDL → LLM sinh flow chính xác hơn |
 | **DAG Optimizer** | Tự động tối ưu thứ tự chạy cho parallel execution tối đa |
 | **AI GATEWAY** | Standalone proxy service: routing, fallback, rate limit, cache, audit, RBAC |
@@ -77,7 +82,7 @@ python -m text_to_sql_flow generate "Mô tả" --no-optimize
 text-to-sql-flow config
 
 # Menu sections:
-# 1. Providers  — xem, set default provider
+# 1. Providers  — xem, set default provider, sửa model name từng provider
 # 2. API Keys   — CRUD API keys, test connectivity
 # 3. Gateway    — cấu hình URL, enable/disable gateway mode
 # 4. Preferences — threshold, auto/interactive, optimize flag
@@ -103,13 +108,19 @@ text-to-sql-flow interactive
 ### AI GATEWAY (v1.2)
 
 ```bash
-# 1. Start gateway
+# 1. Start gateway (direct)
 python -m gateway.main
+
+# hoặc dùng uv
+uv run python -m gateway.main
 
 # 2. Trong terminal khác, dùng CLI với gateway
 python -m text_to_sql_flow generate "Mô tả" --gateway-url http://localhost:8000
 
-# Hoặc dùng Docker Compose
+# hoặc dùng uv
+uv run python -m text_to_sql_flow generate "Mô tả" --gateway-url http://localhost:8000
+
+# 3. Hoặc dùng Docker Compose
 docker compose up gateway -d
 python -m text_to_sql_flow generate "Mô tả" --gateway-url http://localhost:8000
 ```
@@ -162,11 +173,12 @@ docker compose run cli --help
 text_to_sql_flow/          # CLI tool
 ├── cli.py                # Typer CLI (3 commands)
 ├── pipeline.py           # Pipeline controller
-├── evaluator.py          # 5-dim quality evaluation
+├── evaluator.py          # 8-dim quality evaluation + tuning loop
 ├── config.py             # .env + YAML config
 ├── types.py              # Pydantic models
-├── interactive.py        # REPL mode
+├── interactive.py        # REPL mode (enhanced v1.3)
 ├── batch.py              # Batch mode
+├── config_manager.py     # Rich TUI config manager (v1.3)
 ├── dag_optimizer/        # DAG optimization (v1.2)
 │   ├── engine.py
 │   └── review.py
@@ -195,7 +207,7 @@ gateway/                   # AI GATEWAY service (v1.2)
 ## Tests
 
 ```bash
-pytest tests/ -v    # 141+ tests
+pytest tests/ -v    # 168+ tests
 ```
 
 ## Tech stack
