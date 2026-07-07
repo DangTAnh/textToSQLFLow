@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: cải-tiến-gui
-status: phase-11-complete
-last_updated: "2026-07-07T14:00:00.000Z"
+status: complete
+last_updated: "2026-07-07T16:00:00.000Z"
 ---
 
 # Project State
@@ -13,7 +13,7 @@ last_updated: "2026-07-07T14:00:00.000Z"
 See: `.planning/PROJECT.md` (updated 2026-07-07)
 
 **Core value:** Data engineer có thể đưa mô tả nghiệp vụ và nhận luồng SQL Spark sẵn sàng chạy, không cần tự viết từng câu SQL.
-**Current focus:** Milestone v1.3 — Cải tiến GUI (Terminal UI).
+**Current focus:** Milestone v1.3 — Cải tiến GUI (Terminal UI) — completed.
 
 ## Status
 
@@ -22,7 +22,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-07)
 | Initialization | ✅ Complete |
 | Requirements | ✅ Defined (17 v1.3 requirements) |
 | Roadmap | ✅ Created (3 phases: 11-13) |
-| Current Phase | Phase 12 — In Progress |
+| Current Phase | All v1.3 phases complete |
 
 ## Milestones
 
@@ -31,15 +31,15 @@ See: `.planning/PROJECT.md` (updated 2026-07-07)
 | v1.0 | ✅ Complete | 3 (Phases 1-3) | 19 |
 | v1.1 | ✅ Complete | 3 (Phases 4-6) | 9 |
 | v1.2 | ✅ Complete | 4 (Phases 7-10) | 22 |
-| v1.3 | 🔄 In Progress | 3 (Phases 11-13) | 17 |
+| v1.3 | ✅ Complete | 3 (Phases 11-13) | 17 |
 
 ## Phase Summary (v1.3)
 
 | Phase | Status | Requirements |
 |-------|--------|--------------|
 | Phase 11: Config Manager | ✅ Complete | CFG-01 → CFG-07 |
-| Phase 12: Enhanced REPL | 🔄 In Progress | REPL-01 → REPL-06 |
-| Phase 13: Polish & Integration | 📝 Planned | POL-01 → POL-04 |
+| Phase 12: Enhanced REPL | ✅ Complete | REPL-01 → REPL-06 |
+| Phase 13: Polish & Integration | ✅ Complete | POL-01 → POL-04 |
 
 ## Active Decisions
 
@@ -59,32 +59,42 @@ See: `.planning/PROJECT.md` (updated 2026-07-07)
 
 | Aspect | Value |
 |--------|-------|
-| Phase | Milestone v1.3 Phase 11 complete, Phase 12 started |
-| Plan | Phase 12: Enhanced REPL — multi-description, search, progress, history |
-| Status | ✅ Phase 11 complete. Config Manager (CFG-01→CFG-07) implemented. Moving to Phase 12. |
-| Last activity | 2026-07-07 — Phase 11 complete |
+| Phase | Milestone v1.3 complete (Phases 11-13) |
+| Plan | — |
+| Status | ✅ Milestone v1.3 complete. 165 tests pass. 17/17 requirements. |
+| Last activity | 2026-07-07 — v1.3 complete |
 
-## Reports
+## What Was Built (v1.3)
 
-| Report | Path | Description |
-|--------|------|-------------|
-| Milestone Summary v1.1 | `.planning/reports/MILESTONE_SUMMARY-v1.1.md` | Full milestone summary |
+### Phase 11 — Config Manager
+- `text_to_sql_flow/config_manager.py` (new)
+- `text-to-sql-flow config` command (CFG-01)
+- Interactive Rich TUI with 6 menu sections
+- Provider management (CFG-02), API key CRUD + test (CFG-03)
+- Gateway config (CFG-04), preferences (CFG-05)
+- YAML config file I/O (CFG-06), .env management (CFG-07)
+- Extended AppConfig model with gateway_url, threshold, auto, optimize
 
-## Accumulated Context
+### Phase 12 — Enhanced REPL
+- `text_to_sql_flow/interactive.py` (rewritten)
+- Config-aware startup from YAML (REPL-03)
+- Multi-description bulk input (REPL-01)
+- Provider search/filter (REPL-02)
+- Step-by-step progress bars (REPL-04)
+- Session persistence to ~/.text-to-sql-flow/history/ (REPL-05)
+- Rich error panels with actionable suggestions (REPL-06)
+- Fixed missing --gateway-url flag in generate command
 
-### Key Decisions (v1.3)
+### Phase 13 — Polish & Integration
+- `tests/test_config_manager.py` (new) — 10 tests
+- `tests/test_interactive.py` extended — 6 new tests
+- README updated with v1.3 features
+- Total: 165 tests, all passing
 
-- **Scope**: Terminal UI improvements (Rich library), không phải Web UI
-- **Priority**: Config Manager trước (Phase 11), Enhanced REPL sau (Phase 12)
-- **Config Manager**: Menu-driven TUI, quản lý provider, API key, gateway, preferences
-- **Enhanced REPL**: Multi-description input, provider search, progress visualization, session history
-- **Kiến trúc**: Tận dụng tối đa Rich library đã có trong codebase
+## Notes
 
-### Phasing Rationale
-
-1. **Phase 11 first** — Config Manager là nền tảng: cấu hình provider, API key, preferences trước khi cải tiến REPL
-2. **Phase 12 second** — Enhanced REPL sử dụng config từ Phase 11, thêm tính năng tương tác mới
-3. **Phase 13 last** — Tests + docs + edge case handling sau khi UI components hoàn tất
+- **Next**: SQLWF integration (deferred until spec), or new milestone
+- **Known**: Unicode display artifacts on Windows cp1252 when piping output (expected behavior)
 
 ---
 
