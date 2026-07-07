@@ -1,6 +1,6 @@
 # Roadmap: TextToSQLFlow
 
-**[3 phases (v1.0)] + [3 phases (v1.1)] + [4 phases (v1.2)]** | **[19 v1.0 + 9 v1.1 + 22 v1.2 requirements mapped]** | All requirements covered ✓
+**[3 phases (v1.0)] + [3 phases (v1.1)] + [4 phases (v1.2)] + [3 phases (v1.3)]** | **[19 v1.0 + 9 v1.1 + 22 v1.2 + 17 v1.3 requirements mapped]** | All requirements covered ✓
 
 | # | Phase | Goal | Requirements | Success Criteria |
 |---|-------|------|--------------|------------------|
@@ -14,8 +14,9 @@
 | 8 | DAG Optimizer | Phân tích DAG, tối đa parallel execution | DAG-01, DAG-02, DAG-03, DAG-04, DAG-05 | 3 |
 | 9 | AI GATEWAY | Standalone FastAPI service: routing, fallback, cost, rate limit, cache, audit | GW-01 → GW-10 | 5 |
 | 10 | Integration & Polish | E2E tests, Docker Compose, docs | INT-01, INT-02, INT-03 | 2 |
-
----
+| 11 | Config Manager | Interactive Rich TUI: manage providers, API keys, gateway, preferences | CFG-01 → CFG-07 | 4 |
+| 12 | Enhanced REPL | Nâng cấp interactive mode: multi-description, search, progress, history | REPL-01 → REPL-06 | 4 |
+| 13 | Polish & Integration | Tests, docs, edge case handling cho v1.3 | POL-01 → POL-04 | 3 |
 
 ### Phase Details
 
@@ -156,6 +157,45 @@
 2. `docker-compose up` starts both CLI dev env and Gateway service
 3. README updated with all v1.2 features and Gateway setup guide
 
+## v1.3 (Current Milestone)
+
+### Phase 11: Config Manager
+**Goal:** User can manage all configuration (providers, API keys, gateway, preferences) through an interactive Rich-based TUI without editing files manually.
+**Depends on:** Phase 10 (Integration & Polish)
+**Requirements:** CFG-01 → CFG-07
+**Mode:** standard
+**Success Criteria** (what must be TRUE):
+1. User runs `text-to-sql-flow config` and sees a menu-driven TUI with sections: Providers, API Keys, Gateway, Preferences
+2. User can view all 6 providers with status, model info, and set default provider
+3. User can view which API keys are set/missing, set new keys, update existing, delete, and test connectivity
+4. User can configure gateway URL, RBAC key, enable/disable gateway mode
+5. User can adjust evaluation threshold, auto/interactive mode default, optimize flag
+6. Changes are persisted to YAML config file and/or .env file
+
+### Phase 12: Enhanced REPL
+**Goal:** Interactive mode becomes a powerful terminal experience with multi-description input, provider search, progress visualization, and session history.
+**Depends on:** Phase 11 (Config Manager)
+**Requirements:** REPL-01 → REPL-06
+**Mode:** standard
+**Success Criteria** (what must be TRUE):
+1. User can input or paste multiple descriptions in REPL, generate them in batch
+2. User can search/filter providers by typing (live filtering)
+3. REPL automatically uses config from config manager (provider, threshold, flags)
+4. Each generation step shows detailed progress bars with timing
+5. Session history is saved to JSON, can be viewed and resumed later
+6. Errors display as Rich-formatted panels with actionable suggestions
+
+### Phase 13: Polish & Integration
+**Goal:** Tests, documentation, and edge case handling for all v1.3 features.
+**Depends on:** Phases 11, 12
+**Requirements:** POL-01 → POL-04
+**Mode:** quick
+**Success Criteria** (what must be TRUE):
+1. Config manager has unit tests for all CRUD operations
+2. Enhanced REPL has tests for multi-description, session persistence
+3. README updated with v1.3 features and usage guides
+4. All edge cases handled: empty config, no .env, provider unavailable, network timeout
+
 ---
 
 ## Phase Dependencies
@@ -171,6 +211,9 @@ graph LR
     P7 --> P8[Phase 8: DAG Optimizer]
     P8 --> P10[Phase 10: Integration & Polish]
     P9[Phase 9: AI GATEWAY] --> P10
+    P10 --> P11[Phase 11: Config Manager]
+    P11 --> P12[Phase 12: Enhanced REPL]
+    P12 --> P13[Phase 13: Polish & Integration]
 ```
 
 - Phase 1-6: v1.0-v1.1 (completed)
@@ -178,18 +221,22 @@ graph LR
 - Phase 8 phụ thuộc Phase 7 (cần metadata để có flow chính xác trước khi optimize)
 - Phase 9 độc lập — có thể build song song với Phases 7-8
 - Phase 10 phụ thuộc tất cả phase trước (integration test)
+- Phase 11 xây dựng trên nền tảng config cũ (config.py + .env loader)
+- Phase 12 xây dựng trên interactive.py hiện có + config từ Phase 11
+- Phase 13 phụ thuộc tất cả phase v1.3
 
 ## Notes
 
 - **v1.0 (Phases 1-3)**: Complete. All 19 requirements implemented.
 - **v1.1 (Phases 4-6)**: Complete. All 9 requirements implemented.
-- **v1.2 (Phases 7-10)**: Table metadata input, DAG optimization, AI GATEWAY service.
-- **Granularity**: 4 phases for 22 v1.2 requirements.
-- **Approach**: Monorepo — CLI + Gateway cùng repo, shared types.
-- **SQLWF**: Deferred until spec available.
+- **v1.2 (Phases 7-10)**: Complete. Table metadata input, DAG optimization, AI GATEWAY service.
+- **v1.3 (Phases 11-13)**: Terminal UI improvements — config manager, enhanced REPL.
+- **Granularity**: 3 phases for 17 v1.3 requirements.
+- **Approach**: Tận dụng Rich library đã có sẵn. Không thêm GUI framework mới.
 
 ## Coverage
 
+### v1.2
 | Requirement | Phase |
 |-------------|-------|
 | TBL-01 | Phase 7 |
@@ -217,5 +264,28 @@ graph LR
 
 **Coverage: 22/22 v1.2 requirements mapped ✓**
 
+### v1.3
+| Requirement | Phase |
+|-------------|-------|
+| CFG-01 | Phase 11 |
+| CFG-02 | Phase 11 |
+| CFG-03 | Phase 11 |
+| CFG-04 | Phase 11 |
+| CFG-05 | Phase 11 |
+| CFG-06 | Phase 11 |
+| CFG-07 | Phase 11 |
+| REPL-01 | Phase 12 |
+| REPL-02 | Phase 12 |
+| REPL-03 | Phase 12 |
+| REPL-04 | Phase 12 |
+| REPL-05 | Phase 12 |
+| REPL-06 | Phase 12 |
+| POL-01 | Phase 13 |
+| POL-02 | Phase 13 |
+| POL-03 | Phase 13 |
+| POL-04 | Phase 13 |
+
+**Coverage: 17/17 v1.3 requirements mapped ✓**
+
 ---
-*Roadmap updated: 2026-07-06 (v1.2 initialization)*
+*Roadmap updated: 2026-07-07 (v1.3 initialization)*
