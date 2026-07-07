@@ -347,7 +347,7 @@ def _ensure_api_key(console: Console, provider: str, config: AppConfig) -> Optio
     console.print()
     console.print(
         f"[yellow]No API key found for [bold]{provider}[/].[/]\n"
-        f"Set [bold]{PROVIDER_ENV_MAP.get(provider, '?')}[/] in your .env file, "
+        f"Go to [bold]Configuration (2) -> .env File (6) -> {provider}[/] to set it, "
         f"or enter it now:"
     )
     key = Prompt.ask("[bold]API key[/]", password=True)

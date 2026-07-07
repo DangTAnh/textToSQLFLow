@@ -19,7 +19,8 @@ logger = logging.getLogger(__name__)
 _TRUNCATION_HINT = (
     " The response appears to be incomplete (truncated). "
     "This usually means the model hit the max_tokens limit. "
-    "Try increasing max_tokens in the config or using a provider with higher token limits."
+    "Go to Configuration (2) -> Gateway (3) -> '4 Set max_tokens' "
+    "to increase it, or edit text-to-sql-flow.yaml directly."
 )
 
 
