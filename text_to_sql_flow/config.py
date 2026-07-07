@@ -115,6 +115,10 @@ class AppConfig(BaseModel):
         model_name: Model override (None = use provider default).
         temperature: LLM temperature (0.0–2.0).
         max_tokens: Max tokens in response (None = provider default).
+        gateway_url: AI GATEWAY URL (None = direct LLM calls).
+        threshold: Evaluation threshold (1.0–10.0, None = default).
+        auto: Run evaluation loop in auto mode (default True).
+        optimize: Enable DAG optimizer (default True).
     """
 
     provider: str = "opencode"
@@ -122,6 +126,10 @@ class AppConfig(BaseModel):
     model_name: Optional[str] = None
     temperature: float = Field(default=0.3, ge=0.0, le=2.0)
     max_tokens: Optional[int] = None
+    gateway_url: Optional[str] = None
+    threshold: Optional[float] = None
+    auto: Optional[bool] = None
+    optimize: Optional[bool] = None
 
 
 def load_config(config_path: Optional[Path] = None) -> AppConfig:
@@ -154,6 +162,89 @@ def load_config(config_path: Optional[Path] = None) -> AppConfig:
         raise ValueError(f"Config file {path} must contain a YAML mapping (dict)")
 
     return AppConfig(**data)
+
+
+def get_config_status(config: Optional[AppConfig] = None) -> dict:
+    """Return a summary of current config state.
+
+    Returns a dict with:
+    - ``provider``: current default provider name
+    - ``provider_model``: default model for that provider
+    - ``keys``: dict of provider → bool (key is set or missing)
+    - ``gateway_url``: from environment or None
+    - ``config_file``: path to YAML config file (or None)
+    - ``dotenv_file``: path to .env file (or None)
+    """
+    from text_to_sql_flow.llm.provider import PROVIDER_MODEL_MAP
+
+    cfg = config or AppConfig()
+    dotenv = load_dotenv()
+
+    keys: dict[str, bool] = {}
+    for prov, env_var in PROVIDER_ENV_MAP.items():
+        key = dotenv.get(env_var) or os.environ.get(env_var)
+        keys[prov] = bool(key)
+
+    return {
+        "provider": cfg.provider,
+        "provider_model": PROVIDER_MODEL_MAP.get(cfg.provider, "unknown"),
+        "keys": keys,
+        "gateway_url": os.environ.get("GATEWAY_URL"),
+        "config_file": str(DEFAULT_CONFIG_PATH) if DEFAULT_CONFIG_PATH.exists() else None,
+        "dotenv_file": str(DEFAULT_DOTENV_PATH) if DEFAULT_DOTENV_PATH.exists() else None,
+    }
+
+
+def write_config(config: AppConfig, path: Optional[Path] = None) -> None:
+    """Write an *AppConfig* to a YAML file, preserving existing entries.
+
+    Only fields that are non-default are written.
+    """
+    p = path or DEFAULT_CONFIG_PATH
+
+    existing: dict = {}
+    if p.exists():
+        try:
+            with open(p, "r") as f:
+                existing = yaml.safe_load(f) or {}
+        except yaml.YAMLError:
+            existing = {}
+
+    data = config.model_dump(exclude_none=True)
+    existing.update(data)
+
+    with open(p, "w") as f:
+        yaml.dump(existing, f, default_flow_style=False, sort_keys=False)
+
+
+def write_dotenv_key(provider: str, api_key: str) -> None:
+    """Write (or remove) an API key for *provider* in .env.
+
+    Pass *api_key* as ``""`` or ``None`` to remove the entry.
+    """
+    env_var = PROVIDER_ENV_MAP.get(provider)
+    if not env_var:
+        return
+
+    path = DEFAULT_DOTENV_PATH
+    lines: list[str] = []
+    if path.exists():
+        lines = path.read_text(encoding="utf-8").splitlines()
+
+    new_lines: list[str] = []
+    found = False
+    for line in lines:
+        if line.strip().startswith(f"{env_var}="):
+            if api_key:
+                new_lines.append(f"{env_var}={api_key}")
+                found = True
+            # if api_key is empty, skip the line (delete it)
+        else:
+            new_lines.append(line)
+    if api_key and not found:
+        new_lines.append(f"{env_var}={api_key}")
+
+    path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
 
 
 def resolve_api_key(provider: str, config: Optional[AppConfig] = None) -> str:

@@ -85,6 +85,11 @@ def generate(
         "--optimize/--no-optimize",
         help="Enable/disable DAG optimizer for parallel execution (default: enabled)",
     ),
+    gateway_url: Optional[str] = typer.Option(
+        None,
+        "--gateway-url",
+        help="AI GATEWAY URL (e.g. http://localhost:8000). Routes all LLM calls through gateway.",
+    ),
 ):
     """Generate a Spark SQL flow from a business description.
 
@@ -215,3 +220,14 @@ def batch(
         optimize=optimize,
         gateway_url=gateway_url,
     )
+
+
+@app.command()
+def config():
+    """Launch interactive configuration manager (CFG-01).
+
+    Rich-based TUI for managing providers, API keys, gateway, and
+    evaluation preferences. Changes persist to YAML and .env files.
+    """
+    from text_to_sql_flow.config_manager import run_config_manager
+    run_config_manager()
