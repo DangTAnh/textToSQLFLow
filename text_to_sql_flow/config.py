@@ -131,6 +131,7 @@ class AppConfig(BaseModel):
     auto: Optional[bool] = None
     optimize: Optional[bool] = None
     custom_providers: dict[str, dict] = Field(default_factory=dict)
+    provider_models: dict[str, str] = Field(default_factory=dict)
 
 
 
