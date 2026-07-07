@@ -1,0 +1,118 @@
+{
+  "name": "INACTIVE_CUSTOMERS_90_DAYS",
+  "description": "Xác định danh sách khách hàng không phát sinh giao dịch trong 90 ngày gần nhất để phục vụ chiến dịch chăm sóc khách hàng.",
+  "steps": [
+    {
+      "name": "LOAD_CUSTOMERS",
+      "parents": [],
+      "order": 1,
+      "sql": "SELECT customer_id\n     , customer_name\n     , email\n     , phone\nFROM ${TABLE_CUSTOMERS}\nWHERE customer_id IS NOT NULL",
+      "output": {
+        "tempView": "LOAD_CUSTOMERS",
+        "table": "",
+        "appendType": "REPLACE",
+        "kafkaGroup": ""
+      },
+      "description": "Tải danh sách khách hàng từ bảng nguồn, chỉ lấy các cột cần thiết và loại bỏ customer_id NULL.",
+      "diagram": {
+        "x": 100,
+        "y": 100
+      },
+      "active": true,
+      "createdDate": {
+        "$date": "2026-05-15T01:44:25.911000Z"
+      }
+    },
+    {
+      "name": "LOAD_TRANSACTIONS",
+      "parents": [],
+      "order": 1,
+      "sql": "SELECT customer_id\n     , transaction_date\nFROM ${TABLE_TRANSACTIONS}\nWHERE customer_id IS NOT NULL\n  AND transaction_date IS NOT NULL\n  AND transaction_date >= DATE_SUB($[REFERENCE_DATE], 90)",
+      "output": {
+        "tempView": "LOAD_TRANSACTIONS",
+        "table": "",
+        "appendType": "REPLACE",
+        "kafkaGroup": ""
+      },
+      "description": "Tải giao dịch trong 90 ngày gần nhất (theo tham số REFERENCE_DATE), chỉ lấy các cột cần thiết và loại bỏ NULL.",
+      "diagram": {
+        "x": 300,
+        "y": 100
+      },
+      "active": true,
+      "createdDate": {
+        "$date": "2026-05-15T01:44:25.911000Z"
+      }
+    },
+    {
+      "name": "TRANSFORM_RECENT_CUSTOMERS",
+      "parents": [
+        "LOAD_TRANSACTIONS"
+      ],
+      "order": 2,
+      "sql": "SELECT DISTINCT customer_id\nFROM LOAD_TRANSACTIONS",
+      "output": {
+        "tempView": "TRANSFORM_RECENT_CUSTOMERS",
+        "table": "",
+        "appendType": "REPLACE",
+        "kafkaGroup": ""
+      },
+      "description": "Trích xuất danh sách khách hàng duy nhất có giao dịch trong 90 ngày gần nhất, giảm dữ liệu trước khi anti join.",
+      "diagram": {
+        "x": 200,
+        "y": 200
+      },
+      "active": true,
+      "createdDate": {
+        "$date": "2026-05-15T01:44:25.911000Z"
+      }
+    },
+    {
+      "name": "FILTER_INACTIVE_CUSTOMERS",
+      "parents": [
+        "LOAD_CUSTOMERS",
+        "TRANSFORM_RECENT_CUSTOMERS"
+      ],
+      "order": 3,
+      "sql": "SELECT c.customer_id\n     , c.customer_name\n     , c.email\n     , c.phone\nFROM LOAD_CUSTOMERS c\nLEFT ANTI JOIN TRANSFORM_RECENT_CUSTOMERS r\n  ON c.customer_id = r.customer_id",
+      "output": {
+        "tempView": "FILTER_INACTIVE_CUSTOMERS",
+        "table": "",
+        "appendType": "REPLACE",
+        "kafkaGroup": ""
+      },
+      "description": "Lọc khách hàng không xuất hiện trong danh sách gần đây (không có giao dịch trong 90 ngày) bằng LEFT ANTI JOIN.",
+      "diagram": {
+        "x": 200,
+        "y": 300
+      },
+      "active": true,
+      "createdDate": {
+        "$date": "2026-05-15T01:44:25.911000Z"
+      }
+    },
+    {
+      "name": "SAVE_CUSTOMERS",
+      "parents": [
+        "FILTER_INACTIVE_CUSTOMERS"
+      ],
+      "order": 4,
+      "sql": "SELECT *\nFROM FILTER_INACTIVE_CUSTOMERS",
+      "output": {
+        "tempView": "SAVE_CUSTOMERS",
+        "table": "${TABLE_OUTPUT}",
+        "appendType": "REPLACE",
+        "kafkaGroup": ""
+      },
+      "description": "Ghi danh sách khách hàng không hoạt động vào bảng đích dưới dạng Parquet.",
+      "diagram": {
+        "x": 200,
+        "y": 400
+      },
+      "active": true,
+      "createdDate": {
+        "$date": "2026-05-15T01:44:25.911000Z"
+      }
+    }
+  ]
+}

@@ -140,40 +140,24 @@ class ConfigManagerApp:
     # -- Dynamic provider helpers -------------------------------------------
 
     def _get_providers(self) -> list[str]:
-        """Return built-in + custom provider names in order."""
-        custom = list(self.config.custom_providers.keys()) if self.config.custom_providers else []
-        return _BUILTIN_PROVIDERS + custom
+        """Return provider names in order."""
+        return _BUILTIN_PROVIDERS.copy()
 
     def _get_env_var(self, provider: str) -> str:
-        """Resolve env var for a provider (built-in or custom)."""
-        if provider in PROVIDER_ENV_MAP:
-            return PROVIDER_ENV_MAP[provider]
-        info = self._get_custom_info(provider)
-        return info.get("env_var", f"{provider.upper()}_API_KEY")
+        """Resolve env var for a provider."""
+        return PROVIDER_ENV_MAP.get(provider, f"{provider.upper()}_API_KEY")
 
     def _get_provider_model(self, provider: str) -> str:
-        """Resolve default model for a provider."""
-        if provider in PROVIDER_MODEL_MAP:
-            return PROVIDER_MODEL_MAP[provider]
-        info = self._get_custom_info(provider)
-        return info.get("model", "unknown")
+        """Resolve model for a provider — checks user override first."""
+        overrides = getattr(self.config, "provider_models", {}) or {}
+        if provider in overrides:
+            return overrides[provider]
+        from text_to_sql_flow.llm.provider import PROVIDER_MODEL_MAP
+        return PROVIDER_MODEL_MAP.get(provider, "unknown")
 
     def _get_provider_description(self, provider: str) -> str:
         """Resolve description for a provider."""
-        if provider in PROVIDER_DESCRIPTIONS:
-            return PROVIDER_DESCRIPTIONS[provider]
-        info = self._get_custom_info(provider)
-        return info.get("description", "Custom provider")
-
-    def _get_custom_info(self, provider: str) -> dict:
-        """Return custom provider info dict, or empty dict."""
-        if not self.config.custom_providers:
-            return {}
-        return self.config.custom_providers.get(provider, {})
-
-    def _is_custom(self, provider: str) -> bool:
-        """Check if provider is custom (not built-in)."""
-        return provider not in _BUILTIN_PROVIDERS
+        return PROVIDER_DESCRIPTIONS.get(provider, "")
 
     # -- Main loop ----------------------------------------------------------
 
@@ -263,9 +247,8 @@ class ConfigManagerApp:
                 key_ok = status["keys"].get(name, False)
                 is_default = "* default" if name == self.config.provider else ""
                 desc = self._get_provider_description(name)
-                prefix = "[dim]CUSTOM[/] " if self._is_custom(name) else ""
                 t.add_row(
-                    str(i), f"{prefix}{name}", model,
+                    str(i), name, model,
                     "[green][x] key[/]" if key_ok else "[red][ ] no key[/]",
                     f"{is_default} {desc}".strip(),
                 )
@@ -275,23 +258,15 @@ class ConfigManagerApp:
             max_idx = len(providers)
             self.console.print("[bold]Options:[/]")
             self.console.print(f"  [dim]1-{max_idx}[/] Set as default provider")
-            self.console.print("  [dim]a[/] Add custom provider")
-            self.console.print("  [dim]e[/] Edit custom provider")
-            self.console.print("  [dim]d[/] Delete custom provider")
+            self.console.print("  [dim]e[/] Edit provider model")
             self.console.print("  [dim]0[/] Back to main menu")
-            choices = [str(i) for i in range(max_idx + 1)] + ["a", "A", "e", "E", "d", "D", "0"]
+            choices = [str(i) for i in range(max_idx + 1)] + ["e", "E", "0"]
             choice = Prompt.ask("Select option", choices=choices, default="0")
 
             if choice == "0":
                 break
-            if choice.lower() == "a":
-                self._add_custom_provider()
-                continue
             if choice.lower() == "e":
-                self._edit_custom_provider()
-                continue
-            if choice.lower() == "d":
-                self._delete_custom_provider()
+                self._edit_provider_model()
                 continue
             idx = int(choice) - 1
             if 0 <= idx < max_idx:
@@ -305,72 +280,24 @@ class ConfigManagerApp:
                     self.console.print(f"[yellow]{new_provider} is already the default[/]")
                     Prompt.ask("[dim]Press Enter to continue[/]", default="")
 
-    def _add_custom_provider(self) -> None:
-        self.console.print("\n[bold]Add Custom Provider[/]")
-        name = Prompt.ask("Provider name").strip().lower()
-        if not name or not name.isidentifier():
-            self.console.print("[red]Invalid provider name (must be a valid identifier)[/]")
-            Prompt.ask("[dim]Press Enter to continue[/]", default="")
+    def _edit_provider_model(self) -> None:
+        """Edit the model name for a provider."""
+        providers = self._get_providers()
+        self.console.print("\n[bold]Edit Provider Model[/]")
+        for i, name in enumerate(providers, 1):
+            current = self._get_provider_model(name)
+            self.console.print(f"  [dim]{i}[/] {name} — [cyan]{current}[/]")
+        choice = Prompt.ask("Select provider", choices=[str(i) for i in range(1, len(providers) + 1)])
+        provider = providers[int(choice) - 1]
+        current = self._get_provider_model(provider)
+        new_model = Prompt.ask(f"Model for [bold]{provider}[/]", default=current).strip()
+        if not new_model:
             return
-        if name in _BUILTIN_PROVIDERS or name in (self.config.custom_providers or {}):
-            self.console.print(f"[yellow]Provider '{name}' already exists[/]")
-            Prompt.ask("[dim]Press Enter to continue[/]", default="")
-            return
-        env_var = Prompt.ask("Env variable name", default=f"{name.upper()}_API_KEY").strip().upper()
-        model = Prompt.ask("Default model", default="gpt-4o").strip()
-        desc = Prompt.ask("Description (optional)", default="").strip()
-        if not self.config.custom_providers:
-            self.config.custom_providers = {}
-        self.config.custom_providers[name] = {
-            "env_var": env_var,
-            "model": model,
-            "description": desc,
-        }
+        if not self.config.provider_models:
+            self.config.provider_models = {}
+        self.config.provider_models[provider] = new_model
         self._dirty = True
-        self.console.print(f"[green][x] Custom provider '{name}' added[/]")
-        Prompt.ask("[dim]Press Enter to continue[/]", default="")
-
-    def _edit_custom_provider(self) -> None:
-        custom = list(self.config.custom_providers.keys()) if self.config.custom_providers else []
-        if not custom:
-            self.console.print("[yellow]No custom providers to edit[/]")
-            Prompt.ask("[dim]Press Enter to continue[/]", default="")
-            return
-        self.console.print("\n[bold]Edit Custom Provider[/]")
-        for i, name in enumerate(custom, 1):
-            self.console.print(f"  [dim]{i}[/] {name}")
-        choice = Prompt.ask("Select provider", choices=[str(i) for i in range(1, len(custom) + 1)])
-        name = custom[int(choice) - 1]
-        info = self.config.custom_providers[name]
-        env_var = Prompt.ask("Env variable name", default=info.get("env_var", "")).strip().upper()
-        model = Prompt.ask("Default model", default=info.get("model", "")).strip()
-        desc = Prompt.ask("Description", default=info.get("description", "")).strip()
-        self.config.custom_providers[name] = {
-            "env_var": env_var,
-            "model": model,
-            "description": desc,
-        }
-        self._dirty = True
-        self.console.print(f"[green][x] Provider '{name}' updated[/]")
-        Prompt.ask("[dim]Press Enter to continue[/]", default="")
-
-    def _delete_custom_provider(self) -> None:
-        custom = list(self.config.custom_providers.keys()) if self.config.custom_providers else []
-        if not custom:
-            self.console.print("[yellow]No custom providers to delete[/]")
-            Prompt.ask("[dim]Press Enter to continue[/]", default="")
-            return
-        self.console.print("\n[bold]Delete Custom Provider[/]")
-        for i, name in enumerate(custom, 1):
-            self.console.print(f"  [dim]{i}[/] {name}")
-        choice = Prompt.ask("Select provider to delete", choices=[str(i) for i in range(1, len(custom) + 1)])
-        name = custom[int(choice) - 1]
-        if Confirm.ask(f"Delete provider '[bold]{name}[/]'?", default=False):
-            del self.config.custom_providers[name]
-            if self.config.provider == name:
-                self.config.provider = "opencode"
-            self._dirty = True
-            self.console.print(f"[green][x] Custom provider '{name}' deleted[/]")
+        self.console.print(f"[green][x] {provider} model set to {new_model}[/]")
         Prompt.ask("[dim]Press Enter to continue[/]", default="")
 
     # -- API key menu -------------------------------------------------------
@@ -391,9 +318,8 @@ class ConfigManagerApp:
             for i, name in enumerate(providers, 1):
                 env_var = self._get_env_var(name)
                 key_ok = status["keys"].get(name, False)
-                prefix = "[dim]CUSTOM[/] " if self._is_custom(name) else ""
                 t.add_row(
-                    str(i), f"{prefix}{name}", env_var,
+                    str(i), name, env_var,
                     "[green][x] Key set[/]" if key_ok else "[red][ ] Missing[/]",
                 )
             self.console.print(t)
@@ -647,8 +573,7 @@ class ConfigManagerApp:
                 val = dotenv.get(env_var, "")
                 masked = val[:8] + "..." + val[-4:] if len(val) > 16 else (val[:4] + "..." if val else "")
                 status_str = "[green][x] Set[/]" if val else "[red]Missing[/]"
-                prefix = "[dim]CUSTOM[/] " if self._is_custom(name) else ""
-                t.add_row(str(i), f"{prefix}{name}", env_var, status_str, masked if val else "[dim]--[/]")
+                t.add_row(str(i), name, env_var, status_str, masked if val else "[dim]--[/]")
             self.console.print(t)
             self.console.print()
 
