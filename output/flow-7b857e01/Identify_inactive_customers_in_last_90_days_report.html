@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Identify inactive customers in last 90 days — Flow Report</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1a2e; color: #e0e0e0; font-family: -apple-system, 'Segoe UI', Arial, sans-serif; padding: 2rem; line-height: 1.6; }
+  h1 { color: #4fc3f7; font-size: 1.8rem; margin-bottom: 0.3rem; }
+  h2 { color: #4fc3f7; font-size: 1.3rem; margin: 1.5rem 0 0.8rem; border-bottom: 1px solid #333; padding-bottom: 0.3rem; }
+  .description { color: #aaa; margin-bottom: 1.5rem; font-size: 0.95rem; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; }
+  th, td { padding: 0.6rem 0.8rem; text-align: left; border-bottom: 1px solid #333; }
+  th { background: #16213e; color: #4fc3f7; font-weight: 600; }
+  tr:nth-child(even) { background: #1e1e3a; }
+  tr:hover { background: #252550; }
+  .sql-preview { color: #b0b0b0; font-family: 'Courier New', monospace; font-size: 0.85rem; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sql-full { background: #111; color: #4fc3f7; padding: 0.8rem; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85rem; white-space: pre-wrap; margin-top: 0.3rem; }
+  details { cursor: pointer; }
+  details summary { color: #4fc3f7; font-size: 0.85rem; }
+  .diagram { background: #111; padding: 1rem; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 0.9rem; line-height: 1.7; white-space: pre; overflow-x: auto; margin-bottom: 1.5rem; }
+  .diagram .step-link { color: #4fc3f7; }
+  .diagram .step-name { color: #ffd54f; }
+  .eval-box { background: #16213e; border-left: 4px solid #4fc3f7; padding: 1rem; border-radius: 4px; margin-bottom: 1.5rem; }
+  .eval-box .score { font-size: 1.5rem; font-weight: bold; color: #4fc3f7; }
+  .eval-placeholder { color: #666; font-style: italic; }
+  .footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #333; font-size: 0.8rem; color: #666; }
+  .badge { display: inline-block; background: #333; color: #ccc; padding: 0.15rem 0.5rem; border-radius: 3px; font-size: 0.75rem; margin-right: 0.3rem; }
+  .badge-parent { background: #1a3a4a; color: #4fc3f7; }
+</style>
+</head>
+<body>
+
+<h1>Flow: Identify inactive customers in last 90 days</h1>
+<div class="description">Xác định danh sách khách hàng không phát sinh giao dịch trong 90 ngày gần nhất để phục vụ chiến dịch chăm sóc khách hàng.</div>
+
+<h2>Flow Diagram</h2>
+<div class="diagram">[1] LOAD_CUSTOMER 
+[1] LOAD_TRANSACTION 
+  [2] DEDUP_TRANSACTION (depends on: LOAD_TRANSACTION)
+  [3] JOIN_FIND_INACTIVE (depends on: LOAD_CUSTOMER, DEDUP_TRANSACTION)
+  [4] SAVE_INACTIVE_CUSTOMERS (depends on: JOIN_FIND_INACTIVE)</div>
+
+<h2>Steps</h2>
+<table>
+<thead><tr>
+  <th>#</th><th>Name</th><th>Order</th><th>Parents</th><th>Description</th><th>SQL</th>
+</tr></thead>
+<tbody>
+
+<tr>
+  <td>1</td>
+  <td><strong>LOAD_CUSTOMER</strong></td>
+  <td><span class="badge">1</span></td>
+  <td></td>
+  <td>Load customer master data with required columns, filtering out null customer_id.</td>
+  <td>
+    <div class="sql-preview">SELECT
+    customer_id,
+    customer_name,
+    customer_email,
+    customer_phone
+FROM ${CUSTOMER_TABLE}
+WHERE customer_...</div>
+    
+    <details><summary>Show full SQL</summary><div class="sql-full">SELECT
+    customer_id,
+    customer_name,
+    customer_email,
+    customer_phone
+FROM ${CUSTOMER_TABLE}
+WHERE customer_id IS NOT NULL</div></details>
+    
+  </td>
+</tr>
+
+<tr>
+  <td>2</td>
+  <td><strong>LOAD_TRANSACTION</strong></td>
+  <td><span class="badge">1</span></td>
+  <td></td>
+  <td>Load transactions from the last 90 days based on a reference date, with null filtering on key columns.</td>
+  <td>
+    <div class="sql-preview">SELECT
+    customer_id,
+    transaction_date
+FROM ${TRANSACTION_TABLE}
+WHERE transaction_date >= DATE_SUB(${REFERENCE_DA...</div>
+    
+    <details><summary>Show full SQL</summary><div class="sql-full">SELECT
+    customer_id,
+    transaction_date
+FROM ${TRANSACTION_TABLE}
+WHERE transaction_date >= DATE_SUB(${REFERENCE_DATE}, 90)
+  AND transaction_date <= ${REFERENCE_DATE}
+  AND customer_id IS NOT NULL
+  AND transaction_date IS NOT NULL</div></details>
+    
+  </td>
+</tr>
+
+<tr>
+  <td>3</td>
+  <td><strong>DEDUP_TRANSACTION</strong></td>
+  <td><span class="badge">2</span></td>
+  <td><span class="badge badge-parent">LOAD_TRANSACTION</span> </td>
+  <td>Deduplicate transaction customer IDs to get a unique list of customers with activity in the last 90 days.</td>
+  <td>
+    <div class="sql-preview">SELECT DISTINCT customer_id
+FROM LOAD_TRANSACTION
+WHERE customer_id IS NOT NULL</div>
+    
+  </td>
+</tr>
+
+<tr>
+  <td>4</td>
+  <td><strong>JOIN_FIND_INACTIVE</strong></td>
+  <td><span class="badge">3</span></td>
+  <td><span class="badge badge-parent">LOAD_CUSTOMER</span> <span class="badge badge-parent">DEDUP_TRANSACTION</span> </td>
+  <td>Perform an anti-join to identify customers without any transaction in the last 90 days, with a broadcast hint on the small deduplicated transaction set.</td>
+  <td>
+    <div class="sql-preview">SELECT /*+ BROADCAST(DEDUP_TRANSACTION) */
+    c.customer_id,
+    c.customer_name,
+    c.customer_email,
+    c.customer_...</div>
+    
+    <details><summary>Show full SQL</summary><div class="sql-full">SELECT /*+ BROADCAST(DEDUP_TRANSACTION) */
+    c.customer_id,
+    c.customer_name,
+    c.customer_email,
+    c.customer_phone
+FROM LOAD_CUSTOMER c
+LEFT ANTI JOIN DEDUP_TRANSACTION d
+    ON c.customer_id = d.customer_id</div></details>
+    
+  </td>
+</tr>
+
+<tr>
+  <td>5</td>
+  <td><strong>SAVE_INACTIVE_CUSTOMERS</strong></td>
+  <td><span class="badge">4</span></td>
+  <td><span class="badge badge-parent">JOIN_FIND_INACTIVE</span> </td>
+  <td>Write the final list of inactive customers to the output table.</td>
+  <td>
+    <div class="sql-preview">SELECT
+    customer_id,
+    customer_name,
+    customer_email,
+    customer_phone
+FROM JOIN_FIND_INACTIVE</div>
+    
+  </td>
+</tr>
+
+</tbody>
+</table>
+
+
+<h2>Evaluation</h2>
+<div class="eval-placeholder">No evaluation data available.</div>
+
+
+<div class="footer">
+  Generated: 2026-07-07 12:19 UTC<br>
+  Tool: TextToSQLFlow
+</div>
+
+</body>
+</html>
