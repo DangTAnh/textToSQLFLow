@@ -67,17 +67,20 @@ Evaluate the flow JSON on these 7 dimensions, each scored 1-10:
 Respond with ONLY valid JSON in this exact shape (no extra text):
 
 {
-    "score": 7.5,
+    "score": 8.6,
+    "pass": true,
     "dimensions": {
-        "correctness": 8,
-        "completeness": 7,
-        "granularity": 6,
-        "data_quality": 7,
-        "spark_best_practices": 6,
-        "dependency_correctness": 8,
-        "code_quality": 7
+        "correctness": 9,
+        "completeness": 8,
+        "granularity": 7,
+        "data_quality": 8,
+        "spark_best_practices": 7,
+        "dependency_correctness": 9,
+        "code_quality": 8
     },
-    "feedback": "The flow covers the main requirements but ..."
+    "critical_issues": [],
+    "feedback": "The flow covers the main requirements but ...",
+    "confidence": 0.91
 }
 """
 
@@ -89,15 +92,19 @@ class EvaluationResult(BaseModel):
 
     Attributes:
         score: Overall quality score 0-10.
-        feedback: Detailed feedback text from the LLM evaluator.
-        dimensions: Per-dimension scores (correctness, completeness, …).
         passed: True when score >= THRESHOLD.
+        dimensions: Per-dimension scores (correctness, completeness, …).
+        critical_issues: List of blocking issues (from LLM).
+        feedback: Detailed feedback text from the LLM evaluator.
+        confidence: LLM's confidence level 0-1 (from LLM).
     """
 
     score: float
     feedback: str
     dimensions: dict[str, float]
     passed: bool
+    critical_issues: list[str] = []
+    confidence: Optional[float] = None
 
 
 # ── Public API ────────────────────────────────────────────────────────────
@@ -167,6 +174,10 @@ def parse_evaluation_response(response_text: str, threshold: float = THRESHOLD) 
         raise ValueError("Evaluator response missing 'feedback' field")
 
     dimensions = data.get("dimensions", {})
+    critical_issues = data.get("critical_issues", [])
+    confidence = data.get("confidence")
+    if confidence is not None:
+        confidence = float(confidence)
     passed = float(score) >= threshold
 
     return EvaluationResult(
@@ -174,6 +185,8 @@ def parse_evaluation_response(response_text: str, threshold: float = THRESHOLD) 
         feedback=str(feedback),
         dimensions=dimensions,
         passed=passed,
+        critical_issues=critical_issues,
+        confidence=confidence,
     )
 
 
