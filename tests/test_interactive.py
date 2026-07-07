@@ -78,6 +78,7 @@ class TestReGenerate:
             SessionFlow(id="f1", description="failed flow", provider="opencode", status="failed"),
         ]
         with patch("text_to_sql_flow.interactive.Confirm.ask") as mock_confirm:
+            from text_to_sql_flow.config import AppConfig
             from text_to_sql_flow.interactive import _re_generate
-            _re_generate(console, flows)
+            _re_generate(console, flows, AppConfig())
             mock_confirm.assert_not_called()
