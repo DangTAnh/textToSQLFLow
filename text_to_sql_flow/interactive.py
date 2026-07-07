@@ -78,6 +78,7 @@ def interactive_session() -> None:
     config = _load_session_config(console)
     session_flows: list[SessionFlow] = []
 
+    console.clear()
     _render_welcome(console, config)
 
     while True:
