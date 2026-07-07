@@ -113,9 +113,9 @@ def run_generation(
                 error_feedback = extract_validation_error(e)
                 user_prompt = (
                     f"{user_prompt}\n\n---\n"
-                    f"The previous response had validation errors. "
-                    f"Please fix these issues and output ONLY valid JSON:\n"
-                    f"{error_feedback}"
+                    f"The previous response was NOT valid JSON. Error: {error_feedback}\n"
+                    f"Fix the JSON syntax and respond with ONLY the JSON object — "
+                    f"no explanations, no markdown, no code fences.\n"
                 )
             continue
 

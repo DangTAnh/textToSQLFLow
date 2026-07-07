@@ -125,7 +125,7 @@ class AppConfig(BaseModel):
     api_key: Optional[str] = None
     model_name: Optional[str] = None
     temperature: float = Field(default=0.3, ge=0.0, le=2.0)
-    max_tokens: Optional[int] = None
+    max_tokens: Optional[int] = 16384  # None = upstream default; 16384 covers most providers
     gateway_url: Optional[str] = None
     threshold: Optional[float] = None
     auto: Optional[bool] = None

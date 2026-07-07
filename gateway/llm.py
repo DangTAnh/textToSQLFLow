@@ -69,19 +69,20 @@ def _call_upstream(
     model: str,
     messages: list[Message],
     temperature: float = 0.7,
-    max_tokens: int = 4096,
+    max_tokens: Optional[int] = None,
 ) -> dict:
     """Call an OpenAI-compatible upstream LLM API.
 
     Returns the raw JSON response dict.
     """
     url = f"{base_url.rstrip('/')}/chat/completions"
-    body = {
+    body: dict = {
         "model": model,
         "messages": [{"role": m.role, "content": m.content} for m in messages],
         "temperature": temperature,
-        "max_tokens": max_tokens,
     }
+    if max_tokens is not None:
+        body["max_tokens"] = max_tokens
     resp = httpx.post(
         url,
         headers=_build_headers(api_key),

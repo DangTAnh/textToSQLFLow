@@ -16,6 +16,35 @@ from text_to_sql_flow.types import Flow
 logger = logging.getLogger(__name__)
 
 
+_TRUNCATION_HINT = (
+    " The response appears to be incomplete (truncated). "
+    "This usually means the model hit the max_tokens limit. "
+    "Try increasing max_tokens in the config or using a provider with higher token limits."
+)
+
+
+def _looks_truncated(raw: str) -> bool:
+    """Guess if the response was cut off mid-JSON (max_tokens too low)."""
+    stripped = raw.strip()
+    if not stripped:
+        return False
+    # Starts with JSON but doesn't close the top-level array+object
+    first = stripped.find("{")
+    if first == -1:
+        return False
+    # Normalise: keep what looks like the JSON block
+    last = stripped.rfind("}")
+    if last == -1 or last < first:
+        return True  # Opening brace, no closing brace anywhere
+    # Closing brace exists but the block before it
+    # doesn't end with a valid JSON close pattern
+    block = stripped[first:last + 1]
+    if not block.endswith("]"):
+        # JSON object must end with ]} for steps array, or at least }}
+        return not block.endswith("}")
+    return False
+
+
 def parse_flow_response(response_text: str) -> Flow:
     """Parse and validate Spark SQL flow JSON from LLM response text.
 
@@ -40,12 +69,16 @@ def parse_flow_response(response_text: str) -> Flow:
     if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
         json_str = json_str[first_brace : last_brace + 1]
     else:
-        raise ValueError("No JSON object found in LLM response")
+        hint = ""
+        if raw_text and not raw_text.isspace():
+            hint = _TRUNCATION_HINT if _looks_truncated(raw_text) else ""
+        raise ValueError("No JSON object found in LLM response" + hint)
 
     try:
         data: dict[str, Any] = json.loads(json_str)
     except json.JSONDecodeError as e:
-        raise ValueError(f"Failed to parse JSON from LLM response: {e}")
+        hint = _TRUNCATION_HINT if _looks_truncated(raw_text) else ""
+        raise ValueError(f"Failed to parse JSON from LLM response: {e}" + hint)
 
     try:
         return Flow.model_validate(data)

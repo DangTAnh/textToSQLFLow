@@ -1,8 +1,14 @@
-INFO:     Started server process [33220]
+INFO:     Started server process [13068]
 INFO:     Waiting for application startup.
-2026-07-07 18:23:58,536 [INFO] gateway.main: Gateway started — 2 provider(s), 2 routing rule(s), cache TTL=300s
+2026-07-08 00:54:07,552 [WARNING] gateway.config: Environment variable OPENAI_API_KEY is not set
+2026-07-08 00:54:07,552 [WARNING] gateway.config: Environment variable OPENCODE_API_KEY is not set
+2026-07-08 00:54:07,553 [INFO] gateway.main: Gateway started — 2 provider(s), 2 routing rule(s), cache TTL=300s
 INFO:     Application startup complete.
-ERROR:    [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8000): [winerror 10048] only one usage of each socket address (protocol/network address/port) is normally permitted
-INFO:     Waiting for application shutdown.
-2026-07-07 18:23:58,539 [INFO] gateway.main: Gateway shutting down
-INFO:     Application shutdown complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:63980 - "GET /health HTTP/1.1" 200 OK
+2026-07-08 00:55:20,795 [WARNING] gateway.llm: Primary provider opencode failed: Illegal header value b'Bearer '
+INFO:     127.0.0.1:64010 - "POST /v1/chat/completions HTTP/1.1" 502 Bad Gateway
+2026-07-08 00:55:24,966 [WARNING] gateway.llm: Primary provider opencode failed: Illegal header value b'Bearer '
+INFO:     127.0.0.1:64014 - "POST /v1/chat/completions HTTP/1.1" 502 Bad Gateway
+2026-07-08 00:55:30,355 [WARNING] gateway.llm: Primary provider opencode failed: Illegal header value b'Bearer '
+INFO:     127.0.0.1:64019 - "POST /v1/chat/completions HTTP/1.1" 502 Bad Gateway

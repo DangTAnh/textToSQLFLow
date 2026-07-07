@@ -27,3 +27,6 @@ tmp_test/
 
 # Gateway
 gateway_audit.log
+
+# Planning
+.planning/
