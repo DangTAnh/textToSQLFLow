@@ -67,15 +67,12 @@ class SessionFlow:
 # ── Core interactive session ─────────────────────────────────────────────
 
 def interactive_session() -> None:
-    """Run an enhanced interactive REPL session.
+    """Run an enhanced interactive REPL session with main menu.
 
-    Steps:
-    1. Load config from YAML (config-aware)
-    2. Show welcome + recent sessions
-    3. (Optional) multi-description batch input
-    4. Loop: description -> provider with search -> API key -> threshold -> generate
-    5. Save session history
-    6. Show summary with re-generate option
+    Menu:
+    1. Generate flow — standard generation flow
+    2. Configuration — launch config manager TUI
+    0. Exit
     """
     console = Console()
     config = _load_session_config(console)
@@ -83,74 +80,94 @@ def interactive_session() -> None:
 
     _render_welcome(console, config)
 
-    # ── Config manager integration ─────────────────────────────────────────
-    if Confirm.ask("[bold]Open configuration manager?[/]", default=False):
-        from text_to_sql_flow.config_manager import run_config_manager
-        run_config_manager()
-        config = _load_session_config(console)
-        console.print("[green][x] Config reloaded[/]")
-
-    # ── Multi-description input (REPL-01) ────────────────────────────────
-    descriptions = _get_descriptions(console)
-
-    # ── Table metadata (optional) ────────────────────────────────────────
-    tables_path, tables_include_ddl = _prompt_table_metadata(console)
-
-    # ── Generation loop ──────────────────────────────────────────────────
-    for i, desc in enumerate(descriptions, 1):
-        if len(descriptions) > 1:
-            console.print(f"\n[bold cyan]--- Flow {i}/{len(descriptions)} ---[/]")
-
-        # 2. Select provider (with search — REPL-02)
+    while True:
         console.print()
-        console.print("[bold]Step 1:[/] Choose an LLM provider")
-        provider = _select_provider(console)
+        menu = Table(box=box.ROUNDED, show_header=False)
+        menu.add_column("Option", style="bold", width=6)
+        menu.add_column("Action", style="bold", width=20)
+        menu.add_column("Description")
+        menu.add_row("[bold cyan]1[/]", "Generate flow", "Enter description(s) and generate ETL flows")
+        menu.add_row("[bold cyan]2[/]", "Configuration", "Manage providers, API keys, gateway, preferences")
+        menu.add_row("[bold cyan]0[/]", "Exit", "Back to shell")
+        console.print(menu)
+        console.print()
 
-        # 3. Ensure API key
-        cfg = _ensure_api_key(console, provider, config)
-
-        # 4. Adjust threshold
-        threshold = _get_threshold(console, config)
-
-        # 5. Generate with step-by-step progress (REPL-04)
-        flow_id = f"flow-{uuid.uuid4().hex[:8]}"
-        output_dir = Path(f"./output/{flow_id}")
-
-        result_path = _generate_with_progress(
-            console, desc, output_dir, provider, cfg, threshold,
-            getattr(config, "gateway_url", None),
-            getattr(config, "optimize", True),
-            tables_path, tables_include_ddl,
+        choice = Prompt.ask(
+            "[bold]Select option[/]",
+            choices=["0", "1", "2"],
+            default="1",
         )
 
-        if result_path:
-            status = "success"
-            _save_key_to_dotenv(provider, cfg, console) if cfg else None
-        else:
-            status = "failed"
+        if choice == "0":
+            break
 
-        session_flows.append(SessionFlow(
-            id=flow_id,
-            description=desc,
-            provider=provider,
-            status=status,
-            path=result_path,
-        ))
+        if choice == "2":
+            from text_to_sql_flow.config_manager import run_config_manager
+            run_config_manager()
+            config = _load_session_config(console)
+            console.print("[green][x] Config reloaded[/]")
+            Prompt.ask("[dim]Press Enter to continue[/]", default="")
+            continue
 
-    # ── Session persistence (REPL-05) ────────────────────────────────────
-    _save_session_history(session_flows)
+        # choice == "1" — Generate flow
+        # ── Multi-description input (REPL-01) ──────────────────────────────
+        descriptions = _get_descriptions(console)
+        if not descriptions:
+            console.print("[yellow]No description entered.[/]")
+            Prompt.ask("[dim]Press Enter to continue[/]", default="")
+            continue
 
-    # ── Summary + re-generate ────────────────────────────────────────────
-    _show_summary(console, session_flows)
+        # ── Table metadata (optional) ────────────────────────────────────────
+        tables_path, tables_include_ddl = _prompt_table_metadata(console)
 
-    # Config shortcut
-    if Confirm.ask("[bold]Open configuration manager?[/]", default=False):
-        from text_to_sql_flow.config_manager import run_config_manager
-        run_config_manager()
-        config = _load_session_config(console)
-        console.print("[green][x] Config reloaded[/]")
+        # ── Generation loop ──────────────────────────────────────────────────
+        for i, desc in enumerate(descriptions, 1):
+            if len(descriptions) > 1:
+                console.print(f"\n[bold cyan]--- Flow {i}/{len(descriptions)} ---[/]")
 
-    _re_generate(console, session_flows, config, tables_path, tables_include_ddl)
+            # 2. Select provider (with search — REPL-02)
+            console.print()
+            console.print("[bold]Step 1:[/] Choose an LLM provider")
+            provider = _select_provider(console)
+
+            # 3. Ensure API key
+            cfg = _ensure_api_key(console, provider, config)
+
+            # 4. Adjust threshold
+            threshold = _get_threshold(console, config)
+
+            # 5. Generate with step-by-step progress (REPL-04)
+            flow_id = f"flow-{uuid.uuid4().hex[:8]}"
+            output_dir = Path(f"./output/{flow_id}")
+
+            result_path = _generate_with_progress(
+                console, desc, output_dir, provider, cfg, threshold,
+                getattr(config, "gateway_url", None),
+                getattr(config, "optimize", True),
+                tables_path, tables_include_ddl,
+            )
+
+            if result_path:
+                status = "success"
+                _save_key_to_dotenv(provider, cfg, console) if cfg else None
+            else:
+                status = "failed"
+
+            session_flows.append(SessionFlow(
+                id=flow_id,
+                description=desc,
+                provider=provider,
+                status=status,
+                path=result_path,
+            ))
+
+        # ── Session persistence (REPL-05) ────────────────────────────────────
+        _save_session_history(session_flows)
+
+        # ── Summary + re-generate ────────────────────────────────────────────
+        _show_summary(console, session_flows)
+        _re_generate(console, session_flows, config, tables_path, tables_include_ddl)
+        Prompt.ask("[dim]Press Enter to continue[/]", default="")
 
 
 # ── Config-aware (REPL-03) ──────────────────────────────────────────────
