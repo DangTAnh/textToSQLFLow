@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch, PropertyMock
 from text_to_sql_flow.config_manager import (
     ConfigManagerApp,
     run_config_manager,
-    _PROVIDER_LIST,
+    _BUILTIN_PROVIDERS,
     PROVIDER_DESCRIPTIONS,
 )
 
@@ -31,11 +31,11 @@ class TestConfigManagerApp:
     def test_provider_list_all_six(self):
         """All 6 standard providers are in the list."""
         expected = {"openai", "claude", "deepseek", "nvidia", "openrouter", "opencode"}
-        assert set(_PROVIDER_LIST) == expected
+        assert set(_BUILTIN_PROVIDERS) == expected
 
     def test_every_provider_has_description(self):
-        """Every provider in _PROVIDER_LIST has a description."""
-        assert set(_PROVIDER_LIST) == set(PROVIDER_DESCRIPTIONS.keys())
+        """Every provider in _BUILTIN_PROVIDERS has a description."""
+        assert set(_BUILTIN_PROVIDERS) == set(PROVIDER_DESCRIPTIONS.keys())
 
     def test_main_menu_renders_without_error(self):
         """Main menu renders and returns a valid choice."""

@@ -1,7 +1,7 @@
 """Interactive Config Manager -- Rich-based TUI for managing TextToSQLFlow settings.
 
 Features:
-- Provider management: view, set default, model info (CFG-02)
+- Provider management: view, set default, add/edit/delete custom providers (CFG-02)
 - API key management: CRUD, test connectivity (CFG-03)
 - Gateway configuration: URL, RBAC key, enable/disable (CFG-04)
 - Evaluation preferences: threshold, auto/interactive, optimize (CFG-05)
@@ -48,7 +48,7 @@ PROVIDER_DESCRIPTIONS: dict[str, str] = {
     "openrouter": "OpenRouter -- unified API for many models",
 }
 
-_PROVIDER_LIST = list(PROVIDER_ENV_MAP.keys())
+_BUILTIN_PROVIDERS = list(PROVIDER_ENV_MAP.keys())
 
 
 class ConfigManagerApp:
@@ -58,6 +58,44 @@ class ConfigManagerApp:
         self.console = Console()
         self.config: AppConfig = load_config()
         self._dirty = False  # track if changes were made
+
+    # -- Dynamic provider helpers -------------------------------------------
+
+    def _get_providers(self) -> list[str]:
+        """Return built-in + custom provider names in order."""
+        custom = list(self.config.custom_providers.keys()) if self.config.custom_providers else []
+        return _BUILTIN_PROVIDERS + custom
+
+    def _get_env_var(self, provider: str) -> str:
+        """Resolve env var for a provider (built-in or custom)."""
+        if provider in PROVIDER_ENV_MAP:
+            return PROVIDER_ENV_MAP[provider]
+        info = self._get_custom_info(provider)
+        return info.get("env_var", f"{provider.upper()}_API_KEY")
+
+    def _get_provider_model(self, provider: str) -> str:
+        """Resolve default model for a provider."""
+        if provider in PROVIDER_MODEL_MAP:
+            return PROVIDER_MODEL_MAP[provider]
+        info = self._get_custom_info(provider)
+        return info.get("model", "unknown")
+
+    def _get_provider_description(self, provider: str) -> str:
+        """Resolve description for a provider."""
+        if provider in PROVIDER_DESCRIPTIONS:
+            return PROVIDER_DESCRIPTIONS[provider]
+        info = self._get_custom_info(provider)
+        return info.get("description", "Custom provider")
+
+    def _get_custom_info(self, provider: str) -> dict:
+        """Return custom provider info dict, or empty dict."""
+        if not self.config.custom_providers:
+            return {}
+        return self.config.custom_providers.get(provider, {})
+
+    def _is_custom(self, provider: str) -> bool:
+        """Check if provider is custom (not built-in)."""
+        return provider not in _BUILTIN_PROVIDERS
 
     # -- Main loop ----------------------------------------------------------
 
@@ -131,6 +169,9 @@ class ConfigManagerApp:
             self.console.print(Panel("[bold]Provider Management[/]", border_style="cyan"))
             self.console.print()
 
+            providers = self._get_providers()
+            status = get_config_status(self.config)
+
             t = Table(title="Available Providers", box=box.ROUNDED, header_style="bold cyan")
             t.add_column("#", width=3)
             t.add_column("Provider", width=14)
@@ -138,33 +179,44 @@ class ConfigManagerApp:
             t.add_column("Status", width=10)
             t.add_column("Description")
 
-            status = get_config_status(self.config)
-            for i, name in enumerate(_PROVIDER_LIST, 1):
-                model = PROVIDER_MODEL_MAP.get(name, "?")
+            for i, name in enumerate(providers, 1):
+                model = self._get_provider_model(name)
                 key_ok = status["keys"].get(name, False)
                 is_default = "* default" if name == self.config.provider else ""
-                desc = PROVIDER_DESCRIPTIONS.get(name, "")
+                desc = self._get_provider_description(name)
+                prefix = "[dim]CUSTOM[/] " if self._is_custom(name) else ""
                 t.add_row(
-                    str(i), name, model,
+                    str(i), f"{prefix}{name}", model,
                     "[green][x] key[/]" if key_ok else "[red][ ] no key[/]",
                     f"{is_default} {desc}".strip(),
                 )
             self.console.print(t)
             self.console.print()
 
+            max_idx = len(providers)
             self.console.print("[bold]Options:[/]")
-            self.console.print("  [dim]1-6[/] Set as default provider")
+            self.console.print(f"  [dim]1-{max_idx}[/] Set as default provider")
+            self.console.print("  [dim]a[/] Add custom provider")
+            self.console.print("  [dim]e[/] Edit custom provider")
+            self.console.print("  [dim]d[/] Delete custom provider")
             self.console.print("  [dim]0[/] Back to main menu")
-            choice = Prompt.ask(
-                "Select provider to set as default (or 0 to go back)",
-                choices=[str(i) for i in range(len(_PROVIDER_LIST) + 1)],
-                default="0",
-            )
+            choices = [str(i) for i in range(max_idx + 1)] + ["a", "A", "e", "E", "d", "D", "0"]
+            choice = Prompt.ask("Select option", choices=choices, default="0")
+
             if choice == "0":
                 break
+            if choice.lower() == "a":
+                self._add_custom_provider()
+                continue
+            if choice.lower() == "e":
+                self._edit_custom_provider()
+                continue
+            if choice.lower() == "d":
+                self._delete_custom_provider()
+                continue
             idx = int(choice) - 1
-            if 0 <= idx < len(_PROVIDER_LIST):
-                new_provider = _PROVIDER_LIST[idx]
+            if 0 <= idx < max_idx:
+                new_provider = providers[idx]
                 if new_provider != self.config.provider:
                     self.config.provider = new_provider
                     self._dirty = True
@@ -174,6 +226,74 @@ class ConfigManagerApp:
                     self.console.print(f"[yellow]{new_provider} is already the default[/]")
                     Prompt.ask("[dim]Press Enter to continue[/]", default="")
 
+    def _add_custom_provider(self) -> None:
+        self.console.print("\n[bold]Add Custom Provider[/]")
+        name = Prompt.ask("Provider name").strip().lower()
+        if not name or not name.isidentifier():
+            self.console.print("[red]Invalid provider name (must be a valid identifier)[/]")
+            Prompt.ask("[dim]Press Enter to continue[/]", default="")
+            return
+        if name in _BUILTIN_PROVIDERS or name in (self.config.custom_providers or {}):
+            self.console.print(f"[yellow]Provider '{name}' already exists[/]")
+            Prompt.ask("[dim]Press Enter to continue[/]", default="")
+            return
+        env_var = Prompt.ask("Env variable name", default=f"{name.upper()}_API_KEY").strip().upper()
+        model = Prompt.ask("Default model", default="gpt-4o").strip()
+        desc = Prompt.ask("Description (optional)", default="").strip()
+        if not self.config.custom_providers:
+            self.config.custom_providers = {}
+        self.config.custom_providers[name] = {
+            "env_var": env_var,
+            "model": model,
+            "description": desc,
+        }
+        self._dirty = True
+        self.console.print(f"[green][x] Custom provider '{name}' added[/]")
+        Prompt.ask("[dim]Press Enter to continue[/]", default="")
+
+    def _edit_custom_provider(self) -> None:
+        custom = list(self.config.custom_providers.keys()) if self.config.custom_providers else []
+        if not custom:
+            self.console.print("[yellow]No custom providers to edit[/]")
+            Prompt.ask("[dim]Press Enter to continue[/]", default="")
+            return
+        self.console.print("\n[bold]Edit Custom Provider[/]")
+        for i, name in enumerate(custom, 1):
+            self.console.print(f"  [dim]{i}[/] {name}")
+        choice = Prompt.ask("Select provider", choices=[str(i) for i in range(1, len(custom) + 1)])
+        name = custom[int(choice) - 1]
+        info = self.config.custom_providers[name]
+        env_var = Prompt.ask("Env variable name", default=info.get("env_var", "")).strip().upper()
+        model = Prompt.ask("Default model", default=info.get("model", "")).strip()
+        desc = Prompt.ask("Description", default=info.get("description", "")).strip()
+        self.config.custom_providers[name] = {
+            "env_var": env_var,
+            "model": model,
+            "description": desc,
+        }
+        self._dirty = True
+        self.console.print(f"[green][x] Provider '{name}' updated[/]")
+        Prompt.ask("[dim]Press Enter to continue[/]", default="")
+
+    def _delete_custom_provider(self) -> None:
+        custom = list(self.config.custom_providers.keys()) if self.config.custom_providers else []
+        if not custom:
+            self.console.print("[yellow]No custom providers to delete[/]")
+            Prompt.ask("[dim]Press Enter to continue[/]", default="")
+            return
+        self.console.print("\n[bold]Delete Custom Provider[/]")
+        for i, name in enumerate(custom, 1):
+            self.console.print(f"  [dim]{i}[/] {name}")
+        choice = Prompt.ask("Select provider to delete", choices=[str(i) for i in range(1, len(custom) + 1)])
+        name = custom[int(choice) - 1]
+        if Confirm.ask(f"Delete provider '[bold]{name}[/]'?", default=False):
+            del self.config.custom_providers[name]
+            if self.config.provider == name:
+                self.config.provider = "opencode"
+            self._dirty = True
+            self.console.print(f"[green][x] Custom provider '{name}' deleted[/]")
+        Prompt.ask("[dim]Press Enter to continue[/]", default="")
+
     # -- API key menu -------------------------------------------------------
 
     def _api_key_menu(self) -> None:
@@ -182,66 +302,67 @@ class ConfigManagerApp:
             self.console.print(Panel("[bold]API Key Management[/]", border_style="cyan"))
             self.console.print()
 
+            providers = self._get_providers()
             status = get_config_status(self.config)
             t = Table(box=box.ROUNDED, header_style="bold cyan")
             t.add_column("#", width=3)
             t.add_column("Provider", width=14)
-            t.add_column("Env Var", width=20)
+            t.add_column("Env Var", width=22)
             t.add_column("Status", width=16)
-            for i, name in enumerate(_PROVIDER_LIST, 1):
-                env_var = PROVIDER_ENV_MAP.get(name, "?")
+            for i, name in enumerate(providers, 1):
+                env_var = self._get_env_var(name)
                 key_ok = status["keys"].get(name, False)
+                prefix = "[dim]CUSTOM[/] " if self._is_custom(name) else ""
                 t.add_row(
-                    str(i), name, env_var,
+                    str(i), f"{prefix}{name}", env_var,
                     "[green][x] Key set[/]" if key_ok else "[red][ ] Missing[/]",
                 )
             self.console.print(t)
             self.console.print()
 
+            max_idx = len(providers)
             self.console.print("[bold]Options:[/]")
-            self.console.print("  [dim]1-6[/] Set/update API key for a provider")
+            self.console.print(f"  [dim]1-{max_idx}[/] Set/update API key for a provider")
             self.console.print("  [dim]t[/] Test API key connectivity")
             self.console.print("  [dim]0[/] Back to main menu")
-            choice = Prompt.ask(
-                "Select option",
-                choices=[str(i) for i in range(len(_PROVIDER_LIST) + 1)] + ["t", "T", "0"],
-                default="0",
-            )
+            choices = [str(i) for i in range(max_idx + 1)] + ["t", "T", "0"]
+            choice = Prompt.ask("Select option", choices=choices, default="0")
+
             if choice == "0":
                 break
             if choice.lower() == "t":
                 self._test_key_connectivity()
                 continue
             idx = int(choice) - 1
-            if 0 <= idx < len(_PROVIDER_LIST):
-                provider = _PROVIDER_LIST[idx]
+            if 0 <= idx < max_idx:
+                provider = providers[idx]
                 self._set_api_key(provider)
 
     def _set_api_key(self, provider: str) -> None:
-        env_var = PROVIDER_ENV_MAP.get(provider, "?")
+        env_var = self._get_env_var(provider)
         self.console.print(f"\nSetting API key for [bold]{provider}[/] ({env_var}):")
         self.console.print("  [dim]Enter the key, or leave blank to delete/keep as-is.[/]")
         key = Prompt.ask("API key", password=True)
         if not key.strip():
             return
-        # Save to .env
-        write_dotenv_key(provider, key.strip())
+        write_dotenv_key(provider, key.strip(), env_var=env_var)
         self.console.print(f"[green][x] {env_var} saved to {DEFAULT_DOTENV_PATH.name}[/]")
         self._dirty = True
         Prompt.ask("[dim]Press Enter to continue[/]", default="")
 
     def _test_key_connectivity(self) -> None:
         """Test a provider's API key by making a minimal LLM call."""
+        providers = self._get_providers()
         self.console.print()
         self.console.print("[bold]Test API Key Connectivity[/]")
         self.console.print("Select a provider to test:")
-        for i, name in enumerate(_PROVIDER_LIST, 1):
+        for i, name in enumerate(providers, 1):
             self.console.print(f"  [dim]{i}[/] {name}")
         choice = Prompt.ask(
             "Select provider",
-            choices=[str(i) for i in range(1, len(_PROVIDER_LIST) + 1)],
+            choices=[str(i) for i in range(1, len(providers) + 1)],
         )
-        provider = _PROVIDER_LIST[int(choice) - 1]
+        provider = providers[int(choice) - 1]
 
         from text_to_sql_flow.llm.provider import call_llm
         with Progress(
@@ -298,8 +419,7 @@ class ConfigManagerApp:
                     self.console.print(f"[green][x] Gateway URL set to {url}[/]")
                     Prompt.ask("[dim]Press Enter to continue[/]", default="")
             elif choice == "2":
-                if hasattr(self.config, "gateway_url"):
-                    delattr(self.config, "gateway_url")
+                self.config.gateway_url = None
                 self._dirty = True
                 self.console.print("[green][x] Gateway URL cleared[/]")
                 Prompt.ask("[dim]Press Enter to continue[/]", default="")
@@ -418,29 +538,31 @@ class ConfigManagerApp:
             self.console.print(Panel("[bold].env File Management[/]", border_style="cyan"))
             self.console.print()
 
-            env_path = DEFAULT_DOTENV_PATH
-            exists = env_path.exists()
+            providers = self._get_providers()
             dotenv = load_dotenv()
 
             t = Table(box=box.ROUNDED, header_style="bold cyan")
             t.add_column("#", width=3)
+            t.add_column("Provider", width=14)
             t.add_column("Env Var", width=22)
             t.add_column("Status", width=12)
             t.add_column("Value")
-            for i, name in enumerate(_PROVIDER_LIST, 1):
-                env_var = PROVIDER_ENV_MAP.get(name, "?")
+            for i, name in enumerate(providers, 1):
+                env_var = self._get_env_var(name)
                 val = dotenv.get(env_var, "")
                 masked = val[:8] + "..." + val[-4:] if len(val) > 16 else (val[:4] + "..." if val else "")
                 status_str = "[green][x] Set[/]" if val else "[red]Missing[/]"
-                t.add_row(str(i), env_var, status_str, masked if val else "[dim]--[/]")
+                prefix = "[dim]CUSTOM[/] " if self._is_custom(name) else ""
+                t.add_row(str(i), f"{prefix}{name}", env_var, status_str, masked if val else "[dim]--[/]")
             self.console.print(t)
             self.console.print()
 
+            max_idx = len(providers)
             self.console.print("[bold]Options:[/]")
-            self.console.print("  [dim]1-6[/] Add/edit API key in .env")
+            self.console.print(f"  [dim]1-{max_idx}[/] Add/edit API key in .env")
             self.console.print("  [dim]d[/] Delete an API key from .env")
             self.console.print("  [dim]0[/] Back to main menu")
-            choices = [str(i) for i in range(len(_PROVIDER_LIST) + 1)] + ["d", "D", "0"]
+            choices = [str(i) for i in range(max_idx + 1)] + ["d", "D", "0"]
             choice = Prompt.ask("Select option", choices=choices, default="0")
             if choice == "0":
                 break
@@ -448,29 +570,31 @@ class ConfigManagerApp:
                 self._dotenv_delete_key()
                 continue
             idx = int(choice) - 1
-            if 0 <= idx < len(_PROVIDER_LIST):
-                provider = _PROVIDER_LIST[idx]
-                env_var = PROVIDER_ENV_MAP.get(provider, "?")
+            if 0 <= idx < max_idx:
+                provider = providers[idx]
+                env_var = self._get_env_var(provider)
                 self.console.print(f"\nEnter API key for [bold]{provider}[/] ({env_var}):")
                 key = Prompt.ask("API key", password=True)
                 if key.strip():
-                    write_dotenv_key(provider, key.strip())
+                    write_dotenv_key(provider, key.strip(), env_var=env_var)
                     self.console.print(f"[green][x] {env_var} saved[/]")
                     self._dirty = True
                     Prompt.ask("[dim]Press Enter to continue[/]", default="")
 
     def _dotenv_delete_key(self) -> None:
+        providers = self._get_providers()
         self.console.print()
         self.console.print("[bold]Delete API Key[/]")
-        for i, name in enumerate(_PROVIDER_LIST, 1):
+        for i, name in enumerate(providers, 1):
             self.console.print(f"  [dim]{i}[/] {name}")
         choice = Prompt.ask(
             "Select provider key to delete",
-            choices=[str(i) for i in range(1, len(_PROVIDER_LIST) + 1)],
+            choices=[str(i) for i in range(1, len(providers) + 1)],
         )
-        provider = _PROVIDER_LIST[int(choice) - 1]
+        provider = providers[int(choice) - 1]
         if Confirm.ask(f"Delete API key for [bold]{provider}[/]?", default=False):
-            write_dotenv_key(provider, "")
+            env_var = self._get_env_var(provider)
+            write_dotenv_key(provider, "", env_var=env_var)
             self.console.print(f"[green][x] API key for {provider} deleted[/]")
             self._dirty = True
         Prompt.ask("[dim]Press Enter to continue[/]", default="")
