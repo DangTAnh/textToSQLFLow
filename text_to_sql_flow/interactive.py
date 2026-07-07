@@ -338,8 +338,13 @@ def _get_provider_model(provider: str) -> str:
 def _ensure_api_key(console: Console, provider: str, config: AppConfig) -> Optional[AppConfig]:
     """Check API key; prompt if missing. Returns AppConfig with key if entered."""
     try:
-        resolve_api_key(provider, config)
+        key = resolve_api_key(provider, config)
         console.print(f"[dim][x] API key found for {provider}[/]")
+        # Auto-save to .env so gateway (separate process) can use it too
+        from text_to_sql_flow.config import load_dotenv, write_dotenv_key, PROVIDER_ENV_MAP
+        if not load_dotenv(force=True).get(PROVIDER_ENV_MAP.get(provider, "")):
+            write_dotenv_key(provider, key)
+            console.print(f"[dim][→] Saved to .env for gateway[/]")
         return None
     except ValueError:
         pass
