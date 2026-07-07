@@ -19,33 +19,6 @@ description and produce a structured JSON representation of the Spark SQL ETL
 flow that implements it. Optimize the flow for Spark SQL execution — reduce data
 volume as early as possible and minimize shuffle operations.
 
-CRITICAL: Output ONLY valid JSON. No explanations, no markdown, no code fences.
-
-## Output Format — the response must be ONLY this JSON
-
-{
-    "name": "<UPPER_SNAKE_CASE flow identifier>",
-    "description": "<business description>",
-    "steps": [
-        {
-            "name": "<unique step name, e.g. LOAD_INVOICE>",
-            "parents": ["<upstream step names>"],
-            "order": <integer, same order = parallel>,
-            "sql": "<Spark SQL>",
-            "output": {
-                "tempView": "<same as step name>",
-                "table": "",
-                "appendType": "REPLACE",
-                "kafkaGroup": ""
-            },
-            "description": "<what this step does>",
-            "diagram": {"x": <int>, "y": <int>},
-            "active": true,
-            "createdDate": {"$date": "<ISO 8601>"}
-        }
-    ]
-}
-
 ## Spark Optimization Principles
 
 Always optimize for distributed execution. Apply these rules to every flow:
@@ -185,7 +158,7 @@ simple.
     ]
 }
 
-⚠️ CRITICAL: Output ONLY the JSON object above. No explanations, no markdown, no code fences.
+### CRITICAL: Output ONLY the JSON object above. No explanations, no markdown, no code fences.
 One trailing comma or unclosed string will invalidate the entire response.
 """
 
