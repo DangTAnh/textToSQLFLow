@@ -86,7 +86,7 @@ def start_local_gateway(console: Console) -> None:
     # Merge .env vars into subprocess environment so gateway resolves them
     from text_to_sql_flow.config import load_dotenv
     env = os.environ.copy()
-    env.update({k: v for k, v in load_dotenv().items() if v})
+    env.update({k: v for k, v in load_dotenv(force=True).items() if v})
 
     with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as p:
         task = p.add_task(f"[cyan]Starting gateway on {url}...  (0/15)", total=None)
