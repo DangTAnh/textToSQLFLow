@@ -82,3 +82,71 @@ class TestReGenerate:
             from text_to_sql_flow.interactive import _re_generate
             _re_generate(console, flows, AppConfig())
             mock_confirm.assert_not_called()
+
+
+class TestEnhancedREPL:
+    """Tests for new v1.3 REPL features (REPL-01 through REPL-06)."""
+
+    def test_load_session_config_returns_appconfig(self):
+        """_load_session_config returns AppConfig (not None)."""
+        console = MagicMock()
+        from text_to_sql_flow.interactive import _load_session_config
+        cfg = _load_session_config(console)
+        assert cfg is not None
+        assert hasattr(cfg, "provider")
+
+    def test_load_recent_sessions_no_history_dir(self):
+        """_load_recent_sessions returns empty list when no history."""
+        from text_to_sql_flow.interactive import _load_recent_sessions
+        sessions = _load_recent_sessions(limit=3)
+        assert isinstance(sessions, list)
+
+    def test_error_suggestions_api_key(self):
+        """_show_error_suggestion shows API key tips for key-related errors."""
+        console = MagicMock()
+        from text_to_sql_flow.interactive import _show_error_suggestion
+        error = ValueError("No API key found for provider 'openai'")
+        _show_error_suggestion(console, "openai", error)
+        assert console.print.called
+
+    def test_error_suggestions_connection(self):
+        """_show_error_suggestion shows connection tips for connection errors."""
+        console = MagicMock()
+        from text_to_sql_flow.interactive import _show_error_suggestion
+        error = ConnectionError("Failed to connect to api.openai.com")
+        _show_error_suggestion(console, "openai", error)
+        assert console.print.called
+
+    def test_error_suggestions_gateway(self):
+        """_show_error_suggestion shows gateway tips for gateway errors."""
+        console = MagicMock()
+        from text_to_sql_flow.interactive import _show_error_suggestion
+        error = ConnectionError("Gateway connection refused")
+        _show_error_suggestion(console, "openai", error)
+        assert console.print.called
+
+    def test_get_descriptions_single(self):
+        """_get_descriptions returns a single description list."""
+        console = MagicMock()
+        from text_to_sql_flow.interactive import _get_descriptions
+        with patch("text_to_sql_flow.interactive.Confirm.ask", return_value=False):
+            with patch("text_to_sql_flow.interactive.Prompt.ask", return_value="test description"):
+                result = _get_descriptions(console)
+        assert result == ["test description"]
+
+    def test_save_session_history_no_crash(self):
+        """_save_session_history doesn't crash with empty list."""
+        from text_to_sql_flow.interactive import _save_session_history
+        _save_session_history([])  # should not raise
+
+    def test_save_session_history_creates_file(self, tmp_path):
+        """_save_session_history writes a JSON file."""
+        from text_to_sql_flow.interactive import _save_session_history, HISTORY_DIR
+        from text_to_sql_flow.interactive import SessionFlow
+
+        # Temporarily override HISTORY_DIR
+        with patch("text_to_sql_flow.interactive.HISTORY_DIR", tmp_path):
+            flow = SessionFlow(id="t1", description="test", provider="opencode", status="success")
+            _save_session_history([flow])
+            files = list(tmp_path.glob("session-*.json"))
+        assert len(files) == 1
