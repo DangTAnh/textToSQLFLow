@@ -1,1 +1,0 @@
-Xác định danh sách khách hàng không phát sinh giao dịch trong 90 ngày gần nhất để phục vụ chiến dịch chăm sóc khách hàng.
