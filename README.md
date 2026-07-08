@@ -32,7 +32,6 @@ python -m text_to_sql_flow batch descriptions.txt
 |-----------|-------|
 | **4 CLI modes** | `generate`, `interactive` (REPL), `batch` (file), `config` (TUI) |
 | **6 LLM providers** | OpenAI, Claude, DeepSeek, NVIDIA NIM, OpenRouter, OpenCode |
-| **Custom providers** | Thêm provider tùy chỉnh qua Config Manager |
 | **Auto evaluation** | 8-dim rubric, score ≥ 8.5 (default), per-dimension minimums, tuning loop (max 5 lần) |
 | **Table Metadata** | Cung cấp schema JSON hoặc DDL → LLM sinh flow chính xác hơn |
 | **DAG Optimizer** | Tự động tối ưu thứ tự chạy cho parallel execution tối đa |
@@ -41,7 +40,6 @@ python -m text_to_sql_flow batch descriptions.txt
 | **Enhanced REPL** | Multi-description input, provider search, progress viz, session history |
 | **HTML report** | Jinja2 template, dark theme |
 | **Pydantic validation** | Schema validation cho flow JSON |
-| **OpenCode default** | Model free, cần OPENCODE\_API\_KEY |
 
 ## LLM Providers
 
