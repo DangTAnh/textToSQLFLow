@@ -32,12 +32,13 @@ python -m text_to_sql_flow batch descriptions.txt
 |-----------|-------|
 | **4 CLI modes** | `generate`, `interactive` (REPL), `batch` (file), `config` (TUI) |
 | **6 LLM providers** | OpenAI, Claude, DeepSeek, NVIDIA NIM, OpenRouter, OpenCode |
+| **Custom providers** | Thêm provider tùy chỉnh qua Config Manager |
 | **Auto evaluation** | 8-dim rubric, score ≥ 8.5 (default), per-dimension minimums, tuning loop (max 5 lần) |
 | **Table Metadata** | Cung cấp schema JSON hoặc DDL → LLM sinh flow chính xác hơn |
 | **DAG Optimizer** | Tự động tối ưu thứ tự chạy cho parallel execution tối đa |
 | **AI GATEWAY** | Standalone proxy service: routing, fallback, rate limit, cache, audit, RBAC |
-| **Config Manager** | Interactive TUI: quản lý provider, API key, gateway, preferences (v1.3) |
-| **Enhanced REPL** | Multi-description input, provider search, progress viz, session history (v1.3) |
+| **Config Manager** | Interactive TUI: quản lý provider, API key, gateway, preferences |
+| **Enhanced REPL** | Multi-description input, provider search, progress viz, session history |
 | **HTML report** | Jinja2 template, dark theme |
 | **Pydantic validation** | Schema validation cho flow JSON |
 | **OpenCode default** | Model free, cần OPENCODE\_API\_KEY |
@@ -47,15 +48,15 @@ python -m text_to_sql_flow batch descriptions.txt
 | Provider | Flag | Model mặc định | Cần key? |
 |----------|------|---------------|----------|
 | OpenCode (default) | `--provider opencode` | deepseek-v4-flash-free | OPENCODE\_API\_KEY |
-| OpenAI | `--provider openai` | GPT-4o | OPENAI\_API\_KEY |
+| OpenAI | `--provider openai` | gpt-4o | OPENAI\_API\_KEY |
 | Claude | `--provider claude` | claude-sonnet-4-20250514 | ANTHROPIC\_API\_KEY |
 | DeepSeek | `--provider deepseek` | deepseek-chat | DEEPSEEK\_API\_KEY |
-| NVIDIA NIM | `--provider nvidia` | nemotron-4-340b-instruct | NVIDIA\_API\_KEY |
+| NVIDIA NIM | `--provider nvidia` | nvidia/nemotron-4-340b-instruct | NVIDIA\_API\_KEY |
 | OpenRouter | `--provider openrouter` | openrouter/auto | OPENROUTER\_API\_KEY |
 
 ## Usage nâng cao
 
-### Table Metadata (v1.2)
+### Table Metadata
 
 ```bash
 # JSON format
@@ -65,7 +66,7 @@ python -m text_to_sql_flow generate "Mô tả" --tables schema.json
 python -m text_to_sql_flow generate "Mô tả" --tables schema.ddl --tables-include-ddl
 ```
 
-### DAG Optimizer (v1.2)
+### DAG Optimizer
 
 ```bash
 # Optimizer tự động bật (mặc định)
@@ -75,14 +76,14 @@ python -m text_to_sql_flow generate "Mô tả" --optimize
 python -m text_to_sql_flow generate "Mô tả" --no-optimize
 ```
 
-### Config Manager (v1.3)
+### Config Manager
 
 ```bash
 # Launch interactive config manager TUI
 text-to-sql-flow config
 
 # Menu sections:
-# 1. Providers  — xem, set default provider, sửa model name từng provider
+# 1. Providers  — xem, set default provider, thêm/sửa custom provider, sửa model name
 # 2. API Keys   — CRUD API keys, test connectivity
 # 3. Gateway    — cấu hình URL, enable/disable gateway mode
 # 4. Preferences — threshold, auto/interactive, optimize flag
@@ -90,13 +91,13 @@ text-to-sql-flow config
 # 6. .env File  — view, add/edit/delete API keys in .env
 ```
 
-### Enhanced Interactive REPL (v1.3)
+### Enhanced Interactive REPL
 
 ```bash
 # Interactive mode với đầy đủ tính năng
 text-to-sql-flow interactive
 
-# Tính năng mới:
+# Tính năng:
 # - Multi-description: nhập nhiều mô tả cùng lúc
 # - Provider search: gõ để lọc provider
 # - Config-aware: tự động dùng config từ config manager
@@ -105,7 +106,7 @@ text-to-sql-flow interactive
 # - Error suggestions: gợi ý khắc phục lỗi (API key, network, gateway)
 ```
 
-### AI GATEWAY (v1.2)
+### AI GATEWAY
 
 ```bash
 # 1. Start gateway (direct)
@@ -170,19 +171,19 @@ docker compose run cli --help
 ## Cấu trúc source
 
 ```
-text_to_sql_flow/          # CLI tool
-├── cli.py                # Typer CLI (3 commands)
+text_to_sql_flow/          # CLI tool (4 commands)
+├── cli.py                # Typer CLI: generate, interactive, batch, config
 ├── pipeline.py           # Pipeline controller
 ├── evaluator.py          # 8-dim quality evaluation + tuning loop
 ├── config.py             # .env + YAML config
 ├── types.py              # Pydantic models
-├── interactive.py        # REPL mode (enhanced v1.3)
+├── interactive.py        # REPL mode
 ├── batch.py              # Batch mode
-├── config_manager.py     # Rich TUI config manager (v1.3)
-├── dag_optimizer/        # DAG optimization (v1.2)
+├── config_manager.py     # Rich TUI config manager
+├── dag_optimizer/        # DAG optimization
 │   ├── engine.py
 │   └── review.py
-├── table_metadata/        # Table metadata parsing (v1.2)
+├── table_metadata/        # Table metadata parsing
 │   ├── models.py
 │   ├── parser.py
 │   └── ddl_parser.py
@@ -195,19 +196,23 @@ text_to_sql_flow/          # CLI tool
     ├── json_writer.py
     └── html_renderer.py
 
-gateway/                   # AI GATEWAY service (v1.2)
+gateway/                   # AI GATEWAY service
 ├── main.py               # FastAPI app
 ├── config.py             # gateway.yaml loader
 ├── models.py             # Request/response models
 ├── llm.py                # Routing, fallback, cost tracking
 ├── cache.py              # Response cache
 └── rate_limiter.py       # Token bucket rate limiter
+
+Dockerfile.cli            # CLI Docker image
+Dockerfile.gateway        # Gateway Docker image
+docker-compose.yml        # Docker Compose orchestration
 ```
 
 ## Tests
 
 ```bash
-pytest tests/ -v    # 168+ tests
+pytest tests/ -v    # 168 tests (15 test files)
 ```
 
 ## Tech stack
