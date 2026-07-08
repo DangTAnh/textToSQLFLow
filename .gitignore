@@ -30,3 +30,6 @@ gateway_audit.log
 
 # Planning
 .planning/
+
+# Summary
+summary.md
